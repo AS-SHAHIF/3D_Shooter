@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 57163dcf9c50fb44790d2fb462a0199c
+timeCreated: 1513953099
+licenseType: Store
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 104061
+  packageName: M16-A4 HD
+  packageVersion: 1.0
+  assetPath: Assets/M16A4/Materials/Aim_front.mat
+  uploadId: 223497

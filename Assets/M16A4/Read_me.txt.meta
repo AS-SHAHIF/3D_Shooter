@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: abe8a91c16fbbfe45af7d37403d72999
+timeCreated: 1513954993
+licenseType: Store
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 104061
+  packageName: M16-A4 HD
+  packageVersion: 1.0
+  assetPath: Assets/M16A4/Read_me.txt
+  uploadId: 223497
