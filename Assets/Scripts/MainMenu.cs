@@ -20,7 +20,10 @@ public class MainMenu : MonoBehaviour
     public void StartNewScene()
     {
         main_channel.Stop();
-        SceneManager.LoadScene(newGameScene);
+
+        LoadingManager.nextScene = newGameScene;
+
+        SceneManager.LoadScene("LoadingScene");
     }
 
     public void ExitApplication()
@@ -30,6 +33,5 @@ public class MainMenu : MonoBehaviour
 #else
     Application.Quit();
 #endif
-
     }
 }
