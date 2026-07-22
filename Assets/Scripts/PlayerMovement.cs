@@ -18,14 +18,14 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector3 _lastPosition = new Vector3(0f, 0f, 0f);
 
-
-
+    [SerializeField]private Animator animator;
 
 
     
     void Start()
     {
         characterController = GetComponent<CharacterController>();
+        animator = GetComponentInChildren<Animator>();
     }
 
     void Update()
@@ -39,6 +39,7 @@ public class PlayerMovement : MonoBehaviour
 
         float x = Input.GetAxis("Horizontal");
         float y = Input.GetAxis("Vertical");
+        animator.SetBool("IsWalkingForward", y > 0);
 
         Vector3 move = transform.right * x + transform.forward * y;
         characterController.Move(move * _speed * Time.deltaTime);
