@@ -2506,6 +2506,11 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7421293623130007933, guid: e1a90fd55579c0944aa634af1795c432,
+        type: 3}
+      propertyPath: fpsHands
+      value: 
+      objectReference: {fileID: 1488127970}
     - target: {fileID: 7477409668785793340, guid: e1a90fd55579c0944aa634af1795c432,
         type: 3}
       propertyPath: m_Layer
@@ -2731,7 +2736,6 @@ MonoBehaviour:
   isActive: 0
   isADS: 0
   weaponDamage: 0
-  fpsHands: {fileID: 0}
 --- !u!1 &394645400 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5342124018750736620, guid: 0e5abd8c62e3de2429f0d87d99aba2f5,
@@ -4398,8 +4402,7 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1662315223}
+  m_Children: []
   m_Father: {fileID: 657729712}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &761843518 stripped
@@ -6819,6 +6822,7 @@ MonoBehaviour:
   smokeGrenadePrefab: {fileID: 5953422990638034904, guid: 45f07084d6ea45a4ba9a5b9f20338814,
     type: 3}
   maxTacticals: 2
+  fpsHands: {fileID: 1488127970}
 --- !u!4 &1152554495
 Transform:
   m_ObjectHideFlags: 0
@@ -8842,7 +8846,7 @@ PrefabInstance:
     - target: {fileID: 919132149155446097, guid: 3a100f4122d48bb4cbdda24e0d4fefd0,
         type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 3a100f4122d48bb4cbdda24e0d4fefd0,
         type: 3}
@@ -10718,7 +10722,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 756648056}
+    m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 5226001295352269210, guid: e1a90fd55579c0944aa634af1795c432,
         type: 3}
@@ -10738,37 +10742,37 @@ PrefabInstance:
     - target: {fileID: 8470705124955787393, guid: e1a90fd55579c0944aa634af1795c432,
         type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.093
+      value: -35.651
       objectReference: {fileID: 0}
     - target: {fileID: 8470705124955787393, guid: e1a90fd55579c0944aa634af1795c432,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 3.106
+      value: 5.313095
       objectReference: {fileID: 0}
     - target: {fileID: 8470705124955787393, guid: e1a90fd55579c0944aa634af1795c432,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.534
+      value: -12.22
       objectReference: {fileID: 0}
     - target: {fileID: 8470705124955787393, guid: e1a90fd55579c0944aa634af1795c432,
         type: 3}
       propertyPath: m_LocalRotation.w
-      value: 1
+      value: 0.21799831
       objectReference: {fileID: 0}
     - target: {fileID: 8470705124955787393, guid: e1a90fd55579c0944aa634af1795c432,
         type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0
+      value: -0.6726639
       objectReference: {fileID: 0}
     - target: {fileID: 8470705124955787393, guid: e1a90fd55579c0944aa634af1795c432,
         type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0
+      value: -0.672664
       objectReference: {fileID: 0}
     - target: {fileID: 8470705124955787393, guid: e1a90fd55579c0944aa634af1795c432,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0
+      value: 0.21799822
       objectReference: {fileID: 0}
     - target: {fileID: 8470705124955787393, guid: e1a90fd55579c0944aa634af1795c432,
         type: 3}
@@ -15737,6 +15741,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Layer
       value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 738713773061268864, guid: fe198bec217976f44b2241fede36d84a,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1146471903725969159, guid: fe198bec217976f44b2241fede36d84a,
         type: 3}
@@ -21420,6 +21429,7 @@ SceneRoots:
   - {fileID: 308490357}
   - {fileID: 2178197122428529973}
   - {fileID: 41541343}
+  - {fileID: 1662315222}
   - {fileID: 383193158}
   - {fileID: 1805005219}
   - {fileID: 800983962}
