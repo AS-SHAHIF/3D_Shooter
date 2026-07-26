@@ -30,6 +30,8 @@ public class WeaponManager : MonoBehaviour
     public Throwable.ThrowableType equippedTacticalType;
     public GameObject smokeGrenadePrefab;
     public int maxTacticals = 2;
+    [Header("Hands Model")] 
+    public GameObject fpsHands; 
 
 
     private void Awake()
@@ -59,6 +61,7 @@ public class WeaponManager : MonoBehaviour
 
             weapon.isActive = true;
             weapon.animator.enabled = true;
+            UpdateFpsHandsVisibility();
         }
     }
 
@@ -118,6 +121,21 @@ public class WeaponManager : MonoBehaviour
 
     }
 
+    private void UpdateFpsHandsVisibility()
+    {
+        if (fpsHands == null) return;
+
+        if (activeWeaponSlot.transform.childCount > 0)
+        {
+            Weapon activeWeapon = activeWeaponSlot.transform.GetChild(0).GetComponent<Weapon>();
+            fpsHands.SetActive(activeWeapon.thisWeaponModel == Weapon.WeaponModel.m16);
+        }
+        else
+        {
+            fpsHands.SetActive(false);
+        }
+    }
+
     
 
     public void pickUpWeapon(GameObject pickedUpWeapon)
@@ -135,6 +153,7 @@ public class WeaponManager : MonoBehaviour
         pickedUpWeapon.transform.localRotation = Quaternion.Euler(weapon.spawnRotation.x, weapon.spawnRotation.y, weapon.spawnRotation.z);
         weapon.isActive = true;
         weapon.animator.enabled = true;
+        UpdateFpsHandsVisibility();
     }
 
 
@@ -188,6 +207,7 @@ public class WeaponManager : MonoBehaviour
            // Activate weapon
            newWeapon.isActive = true;
        }
+       UpdateFpsHandsVisibility();
     }
 
     internal void DecreaseTotalAmmo(int bulletsToDecrease,Weapon.WeaponModel thisWeaponModel){
