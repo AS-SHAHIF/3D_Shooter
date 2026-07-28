@@ -4,17 +4,29 @@ using UnityEngine.SceneManagement;
 
 public class MainMenu : MonoBehaviour
 {
-    public TMP_Text highScoreUI;
+    [SerializeField] private TMP_Text highScoreUI;
+    [SerializeField] private GameObject settingsPanel;
     string newGameScene = "SampleScene";
     public AudioClip bg_music;
     public AudioSource main_channel;
 
     private void Start()
     {
+        settingsPanel.SetActive(false);
         main_channel.PlayOneShot(bg_music);
         // set the high score
         int highScore = SaveLoadManager.Instance.LoadHighScore();
         highScoreUI.text = $"Top Wave Survived:{highScore}";
+    }
+
+    public void OpenSettings()
+    {
+        settingsPanel.SetActive(true);
+    }
+
+    public void CloseSettings()
+    {
+        settingsPanel.SetActive(false);
     }
 
     public void StartNewScene()
