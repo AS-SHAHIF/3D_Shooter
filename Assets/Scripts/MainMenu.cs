@@ -13,7 +13,10 @@ public class MainMenu : MonoBehaviour
     private void Start()
     {
         settingsPanel.SetActive(false);
-        main_channel.PlayOneShot(bg_music);
+        // main_channel.PlayOneShot(bg_music);
+        main_channel.clip = bg_music;
+        main_channel.loop = true;
+        main_channel.Play();
         // set the high score
         int highScore = SaveLoadManager.Instance.LoadHighScore();
         highScoreUI.text = $"Top Wave Survived:{highScore}";
