@@ -15,6 +15,10 @@ public class MouseMovement : MonoBehaviour
     void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
+        if (_mouseSensitivity <= 0f)
+        {
+            _mouseSensitivity = 150f;
+        }
     }
 
     void Update()

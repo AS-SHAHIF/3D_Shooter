@@ -9,16 +9,16 @@ public class WeaponManager : MonoBehaviour
     public GameObject activeWeaponSlot;
 
     [Header("Ammo")]
-    private int _totalRifleAmmo = 0;
-    private int _totalPistolAmmo = 0;
+    [SerializeField] private int _totalRifleAmmo = 90;
+    [SerializeField] private int _totalPistolAmmo = 50;
 
     [Header("Throwables")]
-    public float throwForce=10f;
-    
+    public float throwForce = 10f;
+
     public GameObject throwableSpawn;
-    public float forceMultiplier=0;
+    public float forceMultiplier = 0;
     public float forceMultiplierLimit = 2f;
-    
+
     [Header("Lethal")]
     public int lethalsCount = 0;
     public Throwable.ThrowableType equippedLethalType;
@@ -30,9 +30,9 @@ public class WeaponManager : MonoBehaviour
     public Throwable.ThrowableType equippedTacticalType;
     public GameObject smokeGrenadePrefab;
     public int maxTacticals = 2;
-    [Header("Hands Model")] 
-    public GameObject fpsHands; 
 
+    [Header("Hands Model")]
+    private GameObject currentFpsHandsInstance;  // Changed: Track the instantiated hands
 
     private void Awake()
     {
@@ -48,34 +48,39 @@ public class WeaponManager : MonoBehaviour
 
     private void Start()
     {
-        activeWeaponSlot = weaponSlots[0];
+        if (weaponSlots != null && weaponSlots.Count > 0)
+        {
+            activeWeaponSlot = weaponSlots[0];
+        }
+
         equippedLethalType = Throwable.ThrowableType.None;
         equippedTacticalType = Throwable.ThrowableType.None;
 
-        if (activeWeaponSlot.transform.childCount > 0)
+        if (activeWeaponSlot != null && activeWeaponSlot.transform.childCount > 0)
         {
             Weapon weapon = activeWeaponSlot.transform.GetChild(0).GetComponent<Weapon>();
-
-            weapon.transform.localPosition = weapon.spawnPosition;
-            weapon.transform.localRotation = Quaternion.Euler(weapon.spawnRotation);
-
-            weapon.isActive = true;
-            weapon.animator.enabled = true;
-            UpdateFpsHandsVisibility();
+            if (weapon != null)
+            {
+                weapon.transform.localPosition = weapon.spawnPosition;
+                weapon.transform.localRotation = Quaternion.Euler(weapon.spawnRotation);
+                weapon.isActive = true;
+                weapon.UpdateStateVisuals();
+                if (weapon.animator != null) weapon.animator.enabled = true;
+            }
         }
+        UpdateFpsHandsVisibility();
     }
 
-    private void Update() 
+    private void Update()
     {
-        foreach (GameObject weaponSlot in weaponSlots)
+        if (weaponSlots != null)
         {
-            if (weaponSlot == activeWeaponSlot)
+            foreach (GameObject weaponSlot in weaponSlots)
             {
-                weaponSlot.SetActive(true);
-            }
-            else
-            {
-                weaponSlot.SetActive(false);
+                if (weaponSlot != null)
+                {
+                    weaponSlot.SetActive(weaponSlot == activeWeaponSlot);
+                }
             }
         }
 
@@ -83,13 +88,9 @@ public class WeaponManager : MonoBehaviour
         {
             SwitchActiveSlot(0);
         }
-        if(Input.GetKeyDown(KeyCode.Alpha1))
+        if (Input.GetKeyDown(KeyCode.Alpha1))
         {
             SwitchActiveSlot(1);
-        }
-        if (Input.GetKey(KeyCode.G))
-        {
-            forceMultiplier += Time.deltaTime;
         }
         if (Input.GetKey(KeyCode.G) || Input.GetKey(KeyCode.T))
         {
@@ -117,48 +118,97 @@ public class WeaponManager : MonoBehaviour
             }
             forceMultiplier = 0;
         }
-
-
     }
 
     private void UpdateFpsHandsVisibility()
     {
-        if (fpsHands == null) return;
+        // Destroy old hands instance
+        if (currentFpsHandsInstance != null)
+        {
+            Destroy(currentFpsHandsInstance);
+            currentFpsHandsInstance = null;
+        }
 
-        if (activeWeaponSlot.transform.childCount > 0)
+        // Check if active weapon has integrated hands
+        if (activeWeaponSlot != null && activeWeaponSlot.transform.childCount > 0)
         {
             Weapon activeWeapon = activeWeaponSlot.transform.GetChild(0).GetComponent<Weapon>();
-            fpsHands.SetActive(activeWeapon.thisWeaponModel == Weapon.WeaponModel.m16);
-        }
-        else
-        {
-            fpsHands.SetActive(false);
+            if (activeWeapon != null)
+            {
+                bool hasIntegratedHands = false;
+                foreach (SkinnedMeshRenderer smr in activeWeapon.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    string n = smr.gameObject.name.ToLower();
+                    if (n.Contains("hand") || n.Contains("arm"))
+                    {
+                        hasIntegratedHands = true;
+                        break;
+                    }
+                }
+
+                // If weapon doesn't have integrated hands, instantiate FPS hands
+                if (!hasIntegratedHands && activeWeapon.fpsHandsPrefab != null)
+                {
+                    // FIXED: Instantiate as child first, then set local position/rotation
+                    currentFpsHandsInstance = Instantiate(activeWeapon.fpsHandsPrefab, activeWeapon.transform);
+                    currentFpsHandsInstance.transform.localPosition = activeWeapon.handSocketPosition;
+                    currentFpsHandsInstance.transform.localRotation = Quaternion.Euler(activeWeapon.handSocketRotation);
+                    currentFpsHandsInstance.SetActive(true);
+                }
+            }
         }
     }
-
-    
-
     public void pickUpWeapon(GameObject pickedUpWeapon)
     {
         AddWeaponIntoActiveSlot(pickedUpWeapon);
     }
 
-
     private void AddWeaponIntoActiveSlot(GameObject pickedUpWeapon)
     {
-        DropCurrentWeapon(pickedUpWeapon);
-        pickedUpWeapon.transform.SetParent(activeWeaponSlot.transform,false);
-        Weapon weapon=pickedUpWeapon.GetComponent<Weapon>();
-        pickedUpWeapon.transform.localPosition = new Vector3(weapon.spawnPosition.x, weapon.spawnPosition.y, weapon.spawnPosition.z);
-        pickedUpWeapon.transform.localRotation = Quaternion.Euler(weapon.spawnRotation.x, weapon.spawnRotation.y, weapon.spawnRotation.z);
+        if (pickedUpWeapon == null || activeWeaponSlot == null) return;
+
+        Weapon weapon = pickedUpWeapon.GetComponentInParent<Weapon>();
+        if (weapon == null) return;
+        GameObject weaponObj = weapon.gameObject;
+
+        DropCurrentWeapon(weaponObj);
+
+        weaponObj.transform.SetParent(activeWeaponSlot.transform, false);
+        weaponObj.transform.localPosition = weapon.spawnPosition;
+        weaponObj.transform.localRotation = Quaternion.Euler(weapon.spawnRotation);
         weapon.isActive = true;
-        weapon.animator.enabled = true;
+        weapon.UpdateStateVisuals();
+
+        if (weapon.animator == null)
+        {
+            weapon.animator = weapon.GetComponent<Animator>() ?? weapon.GetComponentInChildren<Animator>();
+        }
+        if (weapon.animator != null)
+        {
+            weapon.animator.enabled = true;
+        }
+
+        if (weapon.bulletleft <= 0)
+        {
+            weapon.bulletleft = weapon.magazineSize > 0 ? weapon.magazineSize : 30;
+        }
+
+        if (weapon.thisWeaponModel == Weapon.WeaponModel.m16 && _totalRifleAmmo <= 0)
+        {
+            _totalRifleAmmo = 90;
+        }
+        else if (weapon.thisWeaponModel == Weapon.WeaponModel.pistol && _totalPistolAmmo <= 0)
+        {
+            _totalPistolAmmo = 50;
+        }
+
+        // CHANGED: Call UpdateFpsHandsVisibility to instantiate new hands
         UpdateFpsHandsVisibility();
     }
 
-
-    internal void PickUpAmmo(AmmoBox ammo)
+    public void PickUpAmmo(AmmoBox ammo)
     {
+        if (ammo == null) return;
         switch (ammo.ammoType)
         {
             case AmmoBox.AmmoType.pistolAmmo:
@@ -168,61 +218,98 @@ public class WeaponManager : MonoBehaviour
                 _totalRifleAmmo += ammo.ammoAmount;
                 break;
         }
-    }   
+    }
 
     private void DropCurrentWeapon(GameObject pickedUpWeapon)
     {
-        if (activeWeaponSlot.transform.childCount > 0)
+        if (activeWeaponSlot == null || activeWeaponSlot.transform.childCount <= 0) return;
+
+        GameObject weaponToDrop = activeWeaponSlot.transform.GetChild(0).gameObject;
+        Weapon w = weaponToDrop.GetComponent<Weapon>();
+
+        Vector3 dropWorldPos;
+        Quaternion dropWorldRot;
+        if (pickedUpWeapon != null)
         {
-            GameObject weaponToDrop = activeWeaponSlot.transform.GetChild(0).gameObject;
-            weaponToDrop.GetComponent<Weapon>().isActive = false;
-            weaponToDrop.GetComponent<Weapon>().animator.enabled = false;
-            weaponToDrop.transform.SetParent(pickedUpWeapon.transform.parent);
-            weaponToDrop.transform.localPosition = pickedUpWeapon.transform.localPosition;
-            weaponToDrop.transform.localRotation = pickedUpWeapon.transform.localRotation;
+            Weapon pickupW = pickedUpWeapon.GetComponentInParent<Weapon>();
+            GameObject pickupRoot = pickupW != null ? pickupW.gameObject : pickedUpWeapon;
+            dropWorldPos = pickupRoot.transform.position;
+            dropWorldRot = pickupRoot.transform.rotation;
+        }
+        else
+        {
+            dropWorldPos = transform.position + transform.forward * 1.5f;
+            dropWorldRot = Quaternion.Euler(0, transform.eulerAngles.y + 90f, 0);
+        }
+
+        if (w != null)
+        {
+            w.isActive = false;
+            w.isADS = false;
+            if (w.animator != null) w.animator.enabled = false;
+        }
+
+        weaponToDrop.transform.SetParent(null);
+        weaponToDrop.transform.position = dropWorldPos;
+        weaponToDrop.transform.rotation = dropWorldRot;
+        weaponToDrop.transform.localScale = Vector3.one;
+
+        if (w != null)
+        {
+            w.UpdateStateVisuals();
         }
     }
 
-
     private void SwitchActiveSlot(int slotNumber)
     {
-        // Deactivate current weapon
-        if (activeWeaponSlot.transform.childCount > 0)
+        if (weaponSlots == null || slotNumber < 0 || slotNumber >= weaponSlots.Count) return;
+
+        if (activeWeaponSlot != null && activeWeaponSlot.transform.childCount > 0)
         {
             Weapon currentWeapon = activeWeaponSlot.transform.GetChild(0).GetComponent<Weapon>();
-            currentWeapon.isActive = false;
+            if (currentWeapon != null)
+            {
+                currentWeapon.isActive = false;
+                currentWeapon.UpdateStateVisuals();
+            }
         }
 
         activeWeaponSlot = weaponSlots[slotNumber];
 
-        // Activate new weapon 
-       if (activeWeaponSlot.transform.childCount > 0)
-       {
-           Weapon newWeapon = activeWeaponSlot.transform.GetChild(0).GetComponent<Weapon>();
+        if (activeWeaponSlot != null && activeWeaponSlot.transform.childCount > 0)
+        {
+            Weapon newWeapon = activeWeaponSlot.transform.GetChild(0).GetComponent<Weapon>();
+            if (newWeapon != null)
+            {
+                newWeapon.transform.localPosition = newWeapon.spawnPosition;
+                newWeapon.transform.localRotation = Quaternion.Euler(newWeapon.spawnRotation);
+                newWeapon.isActive = true;
+                newWeapon.UpdateStateVisuals();
+                if (newWeapon.animator != null) newWeapon.animator.enabled = true;
+            }
+        }
 
-           // Reset weapon position and rotation
-           newWeapon.transform.localPosition = newWeapon.spawnPosition;
-           newWeapon.transform.localRotation = Quaternion.Euler(newWeapon.spawnRotation);
-
-           // Activate weapon
-           newWeapon.isActive = true;
-       }
-       UpdateFpsHandsVisibility();
+        // CHANGED: Call UpdateFpsHandsVisibility to instantiate new hands for switched weapon
+        UpdateFpsHandsVisibility();
     }
 
-    internal void DecreaseTotalAmmo(int bulletsToDecrease,Weapon.WeaponModel thisWeaponModel){
-        switch(thisWeaponModel){
+    public void DecreaseTotalAmmo(int bulletsToDecrease, Weapon.WeaponModel thisWeaponModel)
+    {
+        switch (thisWeaponModel)
+        {
             case Weapon.WeaponModel.m16:
-                _totalRifleAmmo-=bulletsToDecrease;
+                _totalRifleAmmo -= bulletsToDecrease;
                 break;
             case Weapon.WeaponModel.pistol:
-                _totalPistolAmmo-=bulletsToDecrease;
+                _totalPistolAmmo -= bulletsToDecrease;
                 break;
         }
     }
 
-    public int CheckAmmoLeftFor(Weapon.WeaponModel thisWeaponModel){
-        switch(thisWeaponModel){
+    public int CheckAmmoLeftFor(Weapon.WeaponModel thisWeaponModel)
+    {
+        switch (thisWeaponModel)
+        {
             case Weapon.WeaponModel.m16:
                 return _totalRifleAmmo;
             case Weapon.WeaponModel.pistol:
@@ -234,7 +321,8 @@ public class WeaponManager : MonoBehaviour
 
     public void PickUpThrowable(Throwable throwable)
     {
-        switch(throwable.throwableType)
+        if (throwable == null) return;
+        switch (throwable.throwableType)
         {
             case Throwable.ThrowableType.Grenade:
                 PickUpThrowablesAsLethal(Throwable.ThrowableType.Grenade);
@@ -253,79 +341,73 @@ public class WeaponManager : MonoBehaviour
             if (tacticalsCount < maxTacticals)
             {
                 tacticalsCount += 1;
-                Destroy(InteractionManager.Instance.hoveredThrowable.gameObject);
-                HUDManager.Instance.UpdateThrowablesUI();
-
+                if (InteractionManager.Instance != null && InteractionManager.Instance.hoveredThrowable != null)
+                {
+                    Destroy(InteractionManager.Instance.hoveredThrowable.gameObject);
+                }
+                if (HUDManager.Instance != null) HUDManager.Instance.UpdateThrowablesUI();
             }
             else
             {
                 print("Tactical limit Reached");
             }
         }
-        else
-        {
-            // cannot pickup different lethal
-            // option to swap lethal
-        }
     }
-
-    // private void PickUpGrenade()
-    // {
-    //     grenades += 1;
-    //     HUDManager.Instance.UpdateThrowables(Throwable.ThrowableType.Grenade);
-    // }
 
     private void ThrowLathel()
     {
         GameObject lathelPrefab = GetThrowablePrefab(equippedLethalType);
+        if (lathelPrefab == null || throwableSpawn == null || Camera.main == null) return;
+
         GameObject throwable = Instantiate(lathelPrefab, throwableSpawn.transform.position, Camera.main.transform.rotation);
         Rigidbody rb = throwable.GetComponent<Rigidbody>();
-        rb.AddForce(Camera.main.transform.forward * (throwForce * forceMultiplier), ForceMode.Impulse);
-        throwable.GetComponent<Throwable>().hasBeenThrown = true;
+        if (rb != null) rb.AddForce(Camera.main.transform.forward * (throwForce * forceMultiplier), ForceMode.Impulse);
+        Throwable th = throwable.GetComponent<Throwable>();
+        if (th != null) th.hasBeenThrown = true;
         lethalsCount -= 1;
         if (lethalsCount <= 0)
         {
             equippedLethalType = Throwable.ThrowableType.None;
         }
-        HUDManager.Instance.UpdateThrowablesUI();
+        if (HUDManager.Instance != null) HUDManager.Instance.UpdateThrowablesUI();
     }
 
     private void ThrowTactical()
     {
         GameObject tacticalPrefab = GetThrowablePrefab(equippedTacticalType);
+        if (tacticalPrefab == null || throwableSpawn == null || Camera.main == null) return;
+
         GameObject throwable = Instantiate(tacticalPrefab, throwableSpawn.transform.position, Camera.main.transform.rotation);
         Rigidbody rb = throwable.GetComponent<Rigidbody>();
-        rb.AddForce(Camera.main.transform.forward * (throwForce * forceMultiplier), ForceMode.Impulse);
-        throwable.GetComponent<Throwable>().hasBeenThrown = true;
+        if (rb != null) rb.AddForce(Camera.main.transform.forward * (throwForce * forceMultiplier), ForceMode.Impulse);
+        Throwable th = throwable.GetComponent<Throwable>();
+        if (th != null) th.hasBeenThrown = true;
         tacticalsCount -= 1;
         if (tacticalsCount <= 0)
         {
             equippedTacticalType = Throwable.ThrowableType.None;
         }
-        HUDManager.Instance.UpdateThrowablesUI();
+        if (HUDManager.Instance != null) HUDManager.Instance.UpdateThrowablesUI();
     }
 
     private void PickUpThrowablesAsLethal(Throwable.ThrowableType lethal)
     {
-        if(equippedLethalType == lethal || equippedLethalType == Throwable.ThrowableType.None)
+        if (equippedLethalType == lethal || equippedLethalType == Throwable.ThrowableType.None)
         {
-            equippedLethalType=lethal;
-            if(lethalsCount<maxLethals)
+            equippedLethalType = lethal;
+            if (lethalsCount < maxLethals)
             {
-                lethalsCount+=1;
-                Destroy(InteractionManager.Instance.hoveredThrowable.gameObject);
-                HUDManager.Instance.UpdateThrowablesUI();
-
+                lethalsCount += 1;
+                if (InteractionManager.Instance != null && InteractionManager.Instance.hoveredThrowable != null)
+                {
+                    Destroy(InteractionManager.Instance.hoveredThrowable.gameObject);
+                }
+                if (HUDManager.Instance != null) HUDManager.Instance.UpdateThrowablesUI();
             }
             else
             {
                 print("lethals limit Reached");
             }
-        }
-        else
-        {
-            // cannot pickup different lethal
-            // option to swap lethal
         }
     }
 

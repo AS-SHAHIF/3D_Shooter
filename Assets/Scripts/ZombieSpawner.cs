@@ -65,7 +65,7 @@ public class ZombieSpawner : MonoBehaviour
         List<Enemy> zombieToRemove = new List<Enemy>();
         foreach (Enemy zombie in currentZombieAlive)
         {
-            if (zombie.isDead)
+            if (zombie == null || zombie.isDead)
             {
                 zombieToRemove.Add(zombie);
             }

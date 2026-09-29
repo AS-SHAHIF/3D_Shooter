@@ -1,29 +1,29 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 public class Weapon : MonoBehaviour
 {
-    //shooting
+    // Shooting
     public bool isShooting, readyToShoot;
     private bool allowReset = true;
-    public float shootingDelay = 2f;
+    public float shootingDelay = 0.1f;
 
-    //Burst
-    public int bulletsPerBurst = 3;
+    // Burst
+    public int bulletsPerBurst = 1;
     public int burstBulletLeft;
 
-    // spread
-    public float spreadIntensity;
-    public float hipSpreadIntensity;
-    public float adsSpreadIntensity;
+    // Spread
+    public float spreadIntensity = 0.02f;
+    public float hipSpreadIntensity = 0.025f;
+    public float adsSpreadIntensity = 0.005f;
 
-    // bullet
+    // Bullet
     public GameObject bulletPrefab;
     public Transform bulletSpawn;
-    public float bulletVelocity = 30f;
+    public float bulletVelocity = 40f;
     public float bulletPrefabLifeTime = 3f;
 
     // UI
@@ -37,12 +37,12 @@ public class Weapon : MonoBehaviour
     }
 
     public GameObject muzzleEffect;
-    public ShootingMode currentShootMode;
-    internal Animator animator;
+    public ShootingMode currentShootMode = ShootingMode.Auto;
+    public Animator animator;
 
-    public float reloadTime;
-    public int magazineSize;
-    public int bulletleft;
+    public float reloadTime = 2.2f;
+    public int magazineSize = 30;
+    public int bulletleft = 30;
     private bool isReloading;
 
     public enum WeaponModel
@@ -51,61 +51,111 @@ public class Weapon : MonoBehaviour
         m16
     }
 
-    public WeaponModel thisWeaponModel;
+    public WeaponModel thisWeaponModel = WeaponModel.m16;
 
-    public Vector3 spawnPosition;
-    public Vector3 spawnRotation;
+    public Vector3 spawnPosition = new Vector3(0.0f, -0.22f, 0.35f);
+    public Vector3 spawnRotation = Vector3.zero;
+
+    [Header("FPS Hands")]
+    [SerializeField] public GameObject fpsHandsPrefab;
+    [SerializeField] public Vector3 handSocketPosition = Vector3.zero;
+    [SerializeField] public Vector3 handSocketRotation = Vector3.zero;
+
 
     public bool isActive;
-
     public bool isADS;
+    public int weaponDamage = 35;
 
-    public int weaponDamage;
-
+    private List<Renderer> _handRenderers = new List<Renderer>();
+    private Collider _weaponCollider;
 
     void Awake()
     {
         readyToShoot = true;
+        if (bulletsPerBurst <= 0) bulletsPerBurst = 1;
         burstBulletLeft = bulletsPerBurst;
-        animator = GetComponent<Animator>();
-        bulletleft = magazineSize;
-        spreadIntensity=hipSpreadIntensity;
+        if (animator == null) animator = GetComponent<Animator>() ?? GetComponentInChildren<Animator>();
+        if (bulletleft <= 0 && magazineSize > 0) bulletleft = magazineSize;
+        if (bulletleft <= 0) bulletleft = 30;
+        spreadIntensity = hipSpreadIntensity > 0 ? hipSpreadIntensity : 0.025f;
+
+        CacheComponents();
+        UpdateStateVisuals();
+    }
+
+    private void CacheComponents()
+    {
+        _weaponCollider = GetComponent<Collider>();
+
+        _handRenderers.Clear();
+        foreach (Renderer r in GetComponentsInChildren<Renderer>(true))
+        {
+            string n = r.gameObject.name.ToLower();
+            if (n.Contains("hand") || n.Contains("arm"))
+            {
+                _handRenderers.Add(r);
+            }
+        }
+    }
+
+    public void UpdateStateVisuals()
+    {
+        if (_weaponCollider == null) _weaponCollider = GetComponent<Collider>();
+
+        // When equipped (isActive = true), disable world pickup collider and enable hands
+        // When lying in scene (isActive = false), enable world pickup collider and disable floating hands
+        if (_weaponCollider != null)
+        {
+            _weaponCollider.enabled = !isActive;
+        }
+
+        foreach (Renderer hr in _handRenderers)
+        {
+            if (hr != null)
+            {
+                hr.enabled = isActive;
+            }
+        }
+
+        int targetLayer = LayerMask.NameToLayer(isActive ? "WeaponRender" : "Default");
+        if (targetLayer != -1)
+        {
+            SetLayerRecursively(gameObject, targetLayer);
+        }
+
+        Outline outline = GetComponent<Outline>();
+        if (outline != null && isActive)
+        {
+            outline.enabled = false;
+        }
+    }
+
+    private void SetLayerRecursively(GameObject obj, int newLayer)
+    {
+        if (obj == null) return;
+        obj.layer = newLayer;
+        foreach (Transform child in obj.transform)
+        {
+            SetLayerRecursively(child.gameObject, newLayer);
+        }
     }
 
     void Update()
     {
-        if (isActive)
-        {
-            foreach (Transform child in transform)
-            {
-                child.gameObject.layer = LayerMask.NameToLayer("WeaponRender");
-            }
-
-
-            if (Input.GetMouseButtonDown(1))
-            {
-                EnterADS();
-            }
-            if (Input.GetMouseButtonUp(1))
-            {
-                ExitADS();
-            }
-
-
-            GetComponent<Outline>().enabled = false;
-        }
-        else
-        {
-            foreach (Transform child in transform)
-            {
-                child.gameObject.layer = LayerMask.NameToLayer("Default");
-            }
-        }
-
         if (!isActive) return;
 
         // Skip everything if reloading
         if (isReloading) return;
+
+        // ADS input
+        if (Input.GetMouseButtonDown(1))
+        {
+            EnterADS();
+        }
+        if (Input.GetMouseButtonUp(1))
+        {
+            ExitADS();
+        }
 
         // Detect shooting input
         if (currentShootMode == ShootingMode.Auto)
@@ -118,26 +168,16 @@ public class Weapon : MonoBehaviour
         }
 
         // Manual reload
-        if (Input.GetKeyDown(KeyCode.R) && bulletleft < magazineSize && WeaponManager.Instance.CheckAmmoLeftFor(thisWeaponModel)>0)
+        if (Input.GetKeyDown(KeyCode.R) && bulletleft < magazineSize && WeaponManager.Instance != null && WeaponManager.Instance.CheckAmmoLeftFor(thisWeaponModel) > 0)
         {
             Reload();
             return;
         }
 
         // Auto reload when out of ammo
-        // if (bulletleft <= 0)
-        // {
-        //     if (isShooting)
-        //     {
-        //         SoundManager.Instance.empty_pistol_sound.Play();
-        //     }
-
-        //     Reload();
-        //     return; // ← IMPORTANT: stop here, don't try to shoot
-        // }
         if (bulletleft <= 0)
         {
-            if (WeaponManager.Instance.CheckAmmoLeftFor(thisWeaponModel) > 0)
+            if (WeaponManager.Instance != null && WeaponManager.Instance.CheckAmmoLeftFor(thisWeaponModel) > 0)
             {
                 Reload();
             }
@@ -150,65 +190,84 @@ public class Weapon : MonoBehaviour
             burstBulletLeft = bulletsPerBurst;
             FireWeapon();
         }
-
-        // Update ammo UI
-        // if (AmmoManager.Instance.ammoDisplay != null)
-        // {
-        //     AmmoManager.Instance.ammoDisplay.text = $"{bulletleft} / {magazineSize}";
-        // }
     }
-
-   
 
     private void EnterADS()
     {
-        animator.SetTrigger("enterADS");
-        isADS=true;
-        HUDManager.Instance.middleDot.SetActive(false);
-        spreadIntensity=adsSpreadIntensity;
+        if (animator != null) animator.SetTrigger("enterADS");
+        isADS = true;
+        if (HUDManager.Instance != null && HUDManager.Instance.middleDot != null)
+        {
+            HUDManager.Instance.middleDot.SetActive(false);
+        }
+        spreadIntensity = adsSpreadIntensity;
     }
+
     private void ExitADS()
     {
-        animator.SetTrigger("exitADS");
-        isADS=false;
-        HUDManager.Instance.middleDot.SetActive(true);
-        spreadIntensity=hipSpreadIntensity;
+        if (animator != null) animator.SetTrigger("exitADS");
+        isADS = false;
+        if (HUDManager.Instance != null && HUDManager.Instance.middleDot != null)
+        {
+            HUDManager.Instance.middleDot.SetActive(true);
+        }
+        spreadIntensity = hipSpreadIntensity;
     }
 
     private void FireWeapon()
     {
         bulletleft--;
-        muzzleEffect.GetComponent<ParticleSystem>().Play();
-
-
-        if(isADS)
+        if (muzzleEffect != null)
         {
-            animator.SetTrigger("RECOIL_ADS");
-        }
-        else
-        {
-            animator.SetTrigger("RECOIL");
+            ParticleSystem ps = muzzleEffect.GetComponent<ParticleSystem>();
+            if (ps != null) ps.Play();
         }
 
-        SoundManager.Instance.PlayShootingSound(thisWeaponModel);
+        if (animator != null)
+        {
+            if (isADS)
+            {
+                animator.SetTrigger("RECOIL_ADS");
+            }
+            else
+            {
+                animator.SetTrigger("RECOIL");
+            }
+        }
+
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.PlayShootingSound(thisWeaponModel);
+        }
 
         readyToShoot = false;
 
         Vector3 shootingDirection = CalculateDirectionAndSpread().normalized;
 
-        // Instantiate bullet
-        GameObject bullet = Instantiate(bulletPrefab, bulletSpawn.position, Quaternion.identity);
+        if (bulletSpawn == null)
+        {
+            bulletSpawn = transform.Find("BulletSpawn") ?? transform;
+        }
 
-        Bullet bul = bullet.GetComponent<Bullet>();
-        bul.bulletDamage = weaponDamage;
-        bullet.transform.forward = shootingDirection;
-        bullet.GetComponent<Rigidbody>().AddForce(shootingDirection * bulletVelocity, ForceMode.Impulse);
+        if (bulletPrefab == null)
+        {
+            bulletPrefab = Resources.Load<GameObject>("bullet");
+        }
 
-        StartCoroutine(DestroyBulletAfterTime(bullet, bulletPrefabLifeTime));
+        if (bulletPrefab != null)
+        {
+            GameObject bullet = Instantiate(bulletPrefab, bulletSpawn.position, Quaternion.identity);
+            Bullet bul = bullet.GetComponent<Bullet>();
+            if (bul != null) bul.bulletDamage = weaponDamage;
+            bullet.transform.forward = shootingDirection;
+            Rigidbody rb = bullet.GetComponent<Rigidbody>();
+            if (rb != null) rb.AddForce(shootingDirection * bulletVelocity, ForceMode.Impulse);
+            StartCoroutine(DestroyBulletAfterTime(bullet, bulletPrefabLifeTime));
+        }
 
         if (allowReset)
         {
-            Invoke("ResetShot", shootingDelay);
+            Invoke("ResetShot", shootingDelay > 0 ? shootingDelay : 0.1f);
             allowReset = false;
         }
 
@@ -216,29 +275,38 @@ public class Weapon : MonoBehaviour
         if (currentShootMode == ShootingMode.Burst && burstBulletLeft > 1)
         {
             burstBulletLeft--;
-            Invoke("FireWeapon", shootingDelay);
+            Invoke("FireWeapon", shootingDelay > 0 ? shootingDelay : 0.1f);
         }
     }
 
     private void Reload()
     {
-        if (isReloading) return; // ← Prevent calling Reload() multiple times
+        if (isReloading) return;
 
-        SoundManager.Instance.PlayReloadSound(thisWeaponModel);
-        animator.SetTrigger("RELOAD");
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.PlayReloadSound(thisWeaponModel);
+        }
+
+        if (animator != null)
+        {
+            animator.SetTrigger("RELOAD");
+        }
+
         isReloading = true;
         Invoke("ReloadingCompleted", reloadTime);
     }
 
     private void ReloadingCompleted()
     {
-        if(WeaponManager.Instance.CheckAmmoLeftFor(thisWeaponModel)>magazineSize){
-            bulletleft = magazineSize;
-            WeaponManager.Instance.DecreaseTotalAmmo(bulletleft,thisWeaponModel);
-        }
-        else{
-            bulletleft=WeaponManager.Instance.CheckAmmoLeftFor(thisWeaponModel);
-            WeaponManager.Instance.DecreaseTotalAmmo(bulletleft,thisWeaponModel);    
+        if (WeaponManager.Instance != null)
+        {
+            int ammoLeft = WeaponManager.Instance.CheckAmmoLeftFor(thisWeaponModel);
+            int ammoNeeded = magazineSize - bulletleft;
+            int ammoToReload = Mathf.Min(ammoNeeded, ammoLeft);
+
+            bulletleft += ammoToReload;
+            WeaponManager.Instance.DecreaseTotalAmmo(ammoToReload, thisWeaponModel);
         }
         isReloading = false;
     }
@@ -251,11 +319,11 @@ public class Weapon : MonoBehaviour
 
     private Vector3 CalculateDirectionAndSpread()
     {
-        Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+        Ray ray = Camera.main != null ? Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0)) : new Ray(transform.position, transform.forward);
         RaycastHit hit;
 
         Vector3 targetPoint;
-        if (Physics.Raycast(ray, out hit))
+        if (Physics.Raycast(ray, out hit, 100f, ~0, QueryTriggerInteraction.Ignore))
         {
             targetPoint = hit.point;
         }
@@ -264,7 +332,8 @@ public class Weapon : MonoBehaviour
             targetPoint = ray.GetPoint(100);
         }
 
-        Vector3 direction = targetPoint - bulletSpawn.position;
+        Vector3 origin = bulletSpawn != null ? bulletSpawn.position : transform.position;
+        Vector3 direction = targetPoint - origin;
         float z = UnityEngine.Random.Range(-spreadIntensity, spreadIntensity);
         float y = UnityEngine.Random.Range(-spreadIntensity, spreadIntensity);
         return direction + new Vector3(0, y, z);
@@ -273,6 +342,9 @@ public class Weapon : MonoBehaviour
     private IEnumerator DestroyBulletAfterTime(GameObject bullet, float delay)
     {
         yield return new WaitForSeconds(delay);
-        Destroy(bullet);
+        if (bullet != null)
+        {
+            Destroy(bullet);
+        }
     }
 }

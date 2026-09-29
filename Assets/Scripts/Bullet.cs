@@ -3,14 +3,16 @@ using UnityEngine;
 
 public class Bullet : MonoBehaviour
 {
-
     public int bulletDamage;
-    private void OnCollisionEnter(Collision objectWeHit) {
+
+    private void OnCollisionEnter(Collision objectWeHit)
+    {
         if (objectWeHit.gameObject.CompareTag("Target"))
         {
             print("hit " + objectWeHit.gameObject.name + "!");
             CreateBulletImpactEffect(objectWeHit);
             Destroy(gameObject);
+            return;
         }
 
         if (objectWeHit.gameObject.CompareTag("Wall"))
@@ -18,29 +20,42 @@ public class Bullet : MonoBehaviour
             print("Hit the Wall");
             CreateBulletImpactEffect(objectWeHit);
             Destroy(gameObject);
+            return;
         }
 
         if (objectWeHit.gameObject.CompareTag("Beer"))
         {
             print("hit a Beer bottle");
-            objectWeHit.gameObject.GetComponent<BeerBottle>().Shatter();
+            BeerBottle bottle = objectWeHit.gameObject.GetComponent<BeerBottle>();
+            if (bottle != null)
+            {
+                bottle.Shatter();
+            }
+            return;
         }
-        if (objectWeHit.gameObject.CompareTag("Enemy"))
+
+        // Check if hit an Enemy (either on current collider or parent)
+        Enemy enemy = objectWeHit.gameObject.GetComponentInParent<Enemy>();
+        if (enemy != null || objectWeHit.gameObject.CompareTag("Enemy"))
         {
             print("Hit Zombie");
-            if(objectWeHit.gameObject.GetComponent<Enemy>().isDead==false)
+            if (enemy != null && !enemy.isDead)
             {
-                objectWeHit.gameObject.GetComponent<Enemy>().TakeDamage(bulletDamage);
+                enemy.TakeDamage(bulletDamage);
             }
             CreateBloodSprayEffect(objectWeHit);
             Destroy(gameObject);
+            return;
         }
     }
 
     private void CreateBloodSprayEffect(Collision objectWeHit)
     {
+        if (GlobalReferences.Instance == null || GlobalReferences.Instance.bloodSprayEffect == null) return;
+        if (objectWeHit.contacts == null || objectWeHit.contacts.Length == 0) return;
+
         ContactPoint contact = objectWeHit.contacts[0];
-        GameObject bloodSprayPrefab = (GameObject)Instantiate(
+        GameObject bloodSprayPrefab = Instantiate(
             GlobalReferences.Instance.bloodSprayEffect,
             contact.point,
             Quaternion.LookRotation(contact.normal)
@@ -49,10 +64,13 @@ public class Bullet : MonoBehaviour
         bloodSprayPrefab.transform.SetParent(objectWeHit.gameObject.transform);
     }
 
-    void CreateBulletImpactEffect(Collision objectWeHit)
+    private void CreateBulletImpactEffect(Collision objectWeHit)
     {
+        if (GlobalReferences.Instance == null || GlobalReferences.Instance.bulletImpactEffectPrefab == null) return;
+        if (objectWeHit.contacts == null || objectWeHit.contacts.Length == 0) return;
+
         ContactPoint contact = objectWeHit.contacts[0];
-        GameObject hole = (GameObject)Instantiate(
+        GameObject hole = Instantiate(
             GlobalReferences.Instance.bulletImpactEffectPrefab,
             contact.point,
             Quaternion.LookRotation(contact.normal)

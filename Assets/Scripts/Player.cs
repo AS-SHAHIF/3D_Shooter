@@ -15,7 +15,10 @@ public class Player : MonoBehaviour
 
     private void Start()
     {
-        playerHealthUI.text = $"Health:{HP}";
+        if (playerHealthUI != null)
+        {
+            playerHealthUI.text = $"Health:{HP}";
+        }
     }
     public void TakeDamage(int damageAmount)
     {
@@ -29,21 +32,41 @@ public class Player : MonoBehaviour
         else
         {
             print("Player Hit");
-            StartCoroutine(BloodyScreenEffect());
-            playerHealthUI.text = $"Health:{HP}";
-            SoundManager.Instance.playerChannel.PlayOneShot(SoundManager.Instance.playerHurt);
+            if (bloodyScreen != null)
+            {
+                StartCoroutine(BloodyScreenEffect());
+            }
+            if (playerHealthUI != null)
+            {
+                playerHealthUI.text = $"Health:{HP}";
+            }
+            if (SoundManager.Instance != null && SoundManager.Instance.playerChannel != null && SoundManager.Instance.playerHurt != null)
+            {
+                SoundManager.Instance.playerChannel.PlayOneShot(SoundManager.Instance.playerHurt);
+            }
         }
     }
 
     private void PlayerDead()
     {
-        SoundManager.Instance.playerChannel.PlayOneShot(SoundManager.Instance.playerDie);
+        if (SoundManager.Instance != null && SoundManager.Instance.playerChannel != null)
+        {
+            if (SoundManager.Instance.playerDie != null)
+            {
+                SoundManager.Instance.playerChannel.PlayOneShot(SoundManager.Instance.playerDie);
+            }
+            if (SoundManager.Instance.gameOverMusic != null)
+            {
+                SoundManager.Instance.playerChannel.clip = SoundManager.Instance.gameOverMusic;
+                SoundManager.Instance.playerChannel.PlayDelayed(2f);
+            }
+        }
 
-        SoundManager.Instance.playerChannel.clip = SoundManager.Instance.gameOverMusic;
-        SoundManager.Instance.playerChannel.PlayDelayed(2f);
+        MouseMovement mm = GetComponentInParent<MouseMovement>();
+        if (mm != null) mm.enabled = false;
 
-        GetComponentInParent<MouseMovement>().enabled = false;
-        GetComponentInParent<PlayerMovement>().enabled = false;
+        PlayerMovement pm = GetComponentInParent<PlayerMovement>();
+        if (pm != null) pm.enabled = false;
 
         // Player Death Animation
         var anim = GetComponentInChildren<Animator>();

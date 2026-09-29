@@ -3,58 +3,101 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     private CharacterController characterController;
-    [SerializeField] private float _speed = 15f;
-    [SerializeField] private float _gravity = -9.81f * 2;
-    [SerializeField] private float _jumpHeight = 3f;
+    [SerializeField] private float _speed = 12f;
+    [SerializeField] private float _gravity = -19.62f;
+    [SerializeField] private float _jumpHeight = 2.5f;
 
     public Transform groundCheck;
     [SerializeField] private float _groundDistance = 0.4f;
     public LayerMask GrounLayerMask;
 
-    private Vector3 velocity;
-
+    private Vector3 velocity = Vector3.zero;
     private bool _isGround;
     private bool _isMoving;
+    public bool isMoving => _isMoving;
+    private Vector3 _lastPosition = Vector3.zero;
 
-    private Vector3 _lastPosition = new Vector3(0f, 0f, 0f);
+    [SerializeField] private Animator animator;
 
-    [SerializeField]private Animator animator;
-
-
-    
-    void Start()
+    private void Awake()
     {
         characterController = GetComponent<CharacterController>();
-        animator = GetComponentInChildren<Animator>();
+        if (characterController == null)
+        {
+            characterController = GetComponentInParent<CharacterController>();
+        }
+        if (characterController == null)
+        {
+            characterController = gameObject.AddComponent<CharacterController>();
+        }
     }
 
-    void Update()
+    private void Start()
     {
-        _isGround = Physics.CheckSphere(groundCheck.position, _groundDistance, GrounLayerMask);
+        if (characterController == null)
+        {
+            characterController = GetComponent<CharacterController>();
+        }
+        if (animator == null)
+        {
+            animator = GetComponentInChildren<Animator>();
+        }
+        if (groundCheck == null)
+        {
+            groundCheck = transform.Find("GroundCheck");
+        }
+
+        if (_speed <= 0.1f)
+        {
+            _speed = 12f;
+        }
+        if (_gravity >= 0f)
+        {
+            _gravity = -19.62f;
+        }
+    }
+
+    private void Update()
+    {
+        if (characterController == null) return;
+
+        // Ground check
+        if (groundCheck != null && GrounLayerMask.value != 0)
+        {
+            _isGround = Physics.CheckSphere(groundCheck.position, _groundDistance, GrounLayerMask) || characterController.isGrounded;
+        }
+        else
+        {
+            _isGround = characterController.isGrounded;
+        }
 
         if (_isGround && velocity.y < 0)
         {
             velocity.y = -2f;
         }
 
-        float x = Input.GetAxis("Horizontal");
-        float y = Input.GetAxis("Vertical");
-        animator.SetBool("IsWalkingForward", y > 0);
+        float x = Input.GetAxisRaw("Horizontal");
+        float y = Input.GetAxisRaw("Vertical");
 
-        Vector3 move = transform.right * x + transform.forward * y;
-        characterController.Move(move * _speed * Time.deltaTime);
+        if (animator != null)
+        {
+            animator.SetBool("IsWalkingForward", y > 0);
+        }
+
+        Vector3 moveDirection = (transform.right * x + transform.forward * y).normalized;
 
         if (Input.GetButtonDown("Jump") && _isGround)
         {
-            Debug.Log("Jump");
             velocity.y = Mathf.Sqrt(_jumpHeight * -2f * _gravity);
         }
 
-        velocity.y+=_gravity*Time.deltaTime;
+        velocity.y += _gravity * Time.deltaTime;
+        velocity.y = Mathf.Clamp(velocity.y, -30f, 30f);
 
-        characterController.Move(velocity * Time.deltaTime);
+        Vector3 finalMovement = (moveDirection * _speed) + new Vector3(0, velocity.y, 0);
+        characterController.Move(finalMovement * Time.deltaTime);
 
-        if (_lastPosition != gameObject.transform.position && _isGround == true)
+        if (_lastPosition != transform.position && _isGround)
         {
             _isMoving = true;
         }
@@ -63,6 +106,6 @@ public class PlayerMovement : MonoBehaviour
             _isMoving = false;
         }
 
-        _lastPosition = gameObject.transform.position;
+        _lastPosition = transform.position;
     }
 }

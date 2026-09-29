@@ -6,30 +6,60 @@ public class MainMenu : MonoBehaviour
 {
     [SerializeField] private TMP_Text highScoreUI;
     [SerializeField] private GameObject settingsPanel;
-    string newGameScene = "SampleScene";
+    public string newGameScene = "SampleScene";
     public AudioClip bg_music;
     public AudioSource main_channel;
+    public UnityEngine.Audio.AudioMixer audioMixer;
 
     private void Start()
     {
-        settingsPanel.SetActive(false);
-        // main_channel.PlayOneShot(bg_music);
-        main_channel.clip = bg_music;
-        main_channel.loop = true;
-        main_channel.Play();
+        if (settingsPanel != null)
+        {
+            settingsPanel.SetActive(false);
+        }
+
+        if (audioMixer == null)
+        {
+            audioMixer = Resources.Load<UnityEngine.Audio.AudioMixer>("MainAudioMixer");
+        }
+        if (audioMixer != null && main_channel != null && main_channel.outputAudioMixerGroup == null)
+        {
+            var musicGroups = audioMixer.FindMatchingGroups("music");
+            if (musicGroups != null && musicGroups.Length > 0)
+            {
+                main_channel.outputAudioMixerGroup = musicGroups[0];
+            }
+        }
+
+        if (main_channel != null && bg_music != null)
+        {
+            main_channel.clip = bg_music;
+            main_channel.loop = true;
+            main_channel.Play();
+        }
+
         // set the high score
-        int highScore = SaveLoadManager.Instance.LoadHighScore();
-        highScoreUI.text = $"Top Wave Survived:{highScore}";
+        if (SaveLoadManager.Instance != null)
+        {
+            int highScore = SaveLoadManager.Instance.LoadHighScore();
+            highScoreUI.text = $"Top Wave Survived:{highScore}";
+        }
     }
 
     public void OpenSettings()
     {
-        settingsPanel.SetActive(true);
+        if (settingsPanel != null)
+        {
+            settingsPanel.SetActive(true);
+        }
     }
 
     public void CloseSettings()
     {
-        settingsPanel.SetActive(false);
+        if (settingsPanel != null)
+        {
+            settingsPanel.SetActive(false);
+        }
     }
 
     public void StartNewScene()

@@ -26,6 +26,9 @@ public class HUDManager : MonoBehaviour
 
     public GameObject middleDot;
     
+    [Header("Crystals")]
+    public TextMeshProUGUI crystalsCollectedUI;
+
     private void Awake()
     {
         if(Instance!=null && Instance!=this)
@@ -37,42 +40,55 @@ public class HUDManager : MonoBehaviour
         }
     }
 
+    public void UpdateCrystalCount(int count)
+    {
+        if (crystalsCollectedUI != null)
+        {
+            crystalsCollectedUI.text = $"Crystals: {count}";
+        }
+    }
 
     private void Update() 
     {
+        if (WeaponManager.Instance == null || WeaponManager.Instance.activeWeaponSlot == null) return;
+
         Weapon activeWeapon = WeaponManager.Instance.activeWeaponSlot.GetComponentInChildren<Weapon>();
-        Weapon inActiveWeapon = GetInActiveWeaponSlot().GetComponentInChildren<Weapon>();
+        GameObject inactiveSlot = GetInActiveWeaponSlot();
+        Weapon inActiveWeapon = inactiveSlot != null ? inactiveSlot.GetComponentInChildren<Weapon>() : null;
 
         if (activeWeapon)
         {
-            magazineAmmoUI.text = $"{activeWeapon.bulletleft / activeWeapon.bulletsPerBurst}";
-            totalAmmoUI.text = $"{WeaponManager.Instance.CheckAmmoLeftFor(activeWeapon.thisWeaponModel)}";
+            if (magazineAmmoUI) magazineAmmoUI.text = $"{activeWeapon.bulletleft / Mathf.Max(1, activeWeapon.bulletsPerBurst)}";
+            if (totalAmmoUI) totalAmmoUI.text = $"{WeaponManager.Instance.CheckAmmoLeftFor(activeWeapon.thisWeaponModel)}";
             Weapon.WeaponModel model = activeWeapon.thisWeaponModel;
-            ammoTypeUI.sprite = GetAmmoSprite(model);
-            activeWeaponUI.sprite = GetWeaponSprite(model);
+            if (ammoTypeUI) ammoTypeUI.sprite = GetAmmoSprite(model);
+            if (activeWeaponUI) activeWeaponUI.sprite = GetWeaponSprite(model);
 
             if (inActiveWeapon)
             {
-                inActiveWeaponUI.sprite = GetWeaponSprite(inActiveWeapon.thisWeaponModel);
+                if (inActiveWeaponUI) inActiveWeaponUI.sprite = GetWeaponSprite(inActiveWeapon.thisWeaponModel);
+            }
+            else
+            {
+                if (inActiveWeaponUI) inActiveWeaponUI.sprite = Empty_Slot;
             }
         }
         else
         {
-            magazineAmmoUI.text = "";
-            totalAmmoUI.text = "";
-            ammoTypeUI.sprite = Empty_Slot;
-            activeWeaponUI.sprite = Empty_Slot;   // ← was activeWeapon.sprite (wrong)
-            inActiveWeaponUI.sprite = Empty_Slot; // ← was inActiveWeapon.sprite (wrong)
+            if (magazineAmmoUI) magazineAmmoUI.text = "";
+            if (totalAmmoUI) totalAmmoUI.text = "";
+            if (ammoTypeUI) ammoTypeUI.sprite = Empty_Slot;
+            if (activeWeaponUI) activeWeaponUI.sprite = Empty_Slot;
+            if (inActiveWeaponUI) inActiveWeaponUI.sprite = Empty_Slot;
         }
-
 
         if (WeaponManager.Instance.lethalsCount <= 0)
         {
-            lethalUI.sprite = greySlot;
+            if (lethalUI) lethalUI.sprite = greySlot;
         }
         if (WeaponManager.Instance.tacticalsCount <= 0)
         {
-            tacticalUI.sprite = greySlot;
+            if (tacticalUI) tacticalUI.sprite = greySlot;
         }
     }
 

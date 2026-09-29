@@ -1,11 +1,18 @@
+using System;
 using UnityEngine;
 
 public class InteractionManager : MonoBehaviour
 {
     public static InteractionManager Instance { get; set; }
-    public Weapon hoveredWeapon=null;
-    public AmmoBox hoveredAmmoBox;
-    public Throwable hoveredThrowable;
+
+    public Weapon hoveredWeapon = null;
+    public AmmoBox hoveredAmmoBox = null;
+    public Throwable hoveredThrowable = null;
+    public Crystal hoveredCrystal = null;
+
+    [Header("Interaction Settings")]
+    public float interactionDistance = 4.0f;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -20,79 +27,301 @@ public class InteractionManager : MonoBehaviour
 
     private void Update()
     {
-        Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-        RaycastHit hit;
-        if (Physics.Raycast(ray, out hit))
+        Camera cam = Camera.main;
+        if (cam == null) return;
+
+        Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+        RaycastHit[] hits = Physics.RaycastAll(ray, interactionDistance, ~0, QueryTriggerInteraction.Collide);
+        Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        bool foundInteractable = false;
+
+        foreach (RaycastHit hit in hits)
         {
-            GameObject objectHitByRaycast=hit.transform.gameObject;
-            if (objectHitByRaycast.GetComponent<Weapon>() && objectHitByRaycast.GetComponent<Weapon>().isActive==false)
+            GameObject obj = hit.transform.gameObject;
+
+            // Ignore player's own colliders
+            if (obj.CompareTag("Player") || obj.CompareTag("MainCamera") || obj.GetComponentInParent<PlayerMovement>() != null || obj.GetComponentInParent<CharacterController>() != null)
             {
-                // Disable the outline for previously selected item
-                if(hoveredWeapon)
-                {
-                    hoveredWeapon.GetComponent<Outline>().enabled = false;
-                }
-                hoveredWeapon=objectHitByRaycast.gameObject.GetComponent<Weapon>();
-                hoveredWeapon.GetComponent<Outline>().enabled=true;
-                if (Input.GetKeyDown(KeyCode.F))
-                {
-                    WeaponManager.Instance.pickUpWeapon(objectHitByRaycast.gameObject);
-                }
-            }
-            else
-            {
-                if (hoveredWeapon)
-                {
-                    hoveredWeapon.GetComponent<Outline>().enabled = false;
-                }
+                continue;
             }
 
-            //  Ammo Box
-            if (objectHitByRaycast.GetComponent<AmmoBox>())
+            // 1. Weapon Detection
+            Weapon hitWeapon = obj.GetComponentInParent<Weapon>();
+            if (hitWeapon != null && !hitWeapon.isActive)
             {
-                // Disable the outline for previously selected item
-                if (hoveredAmmoBox)
-                {
-                    hoveredAmmoBox.GetComponent<Outline>().enabled = false;
-                }
-                hoveredAmmoBox =objectHitByRaycast.gameObject.GetComponent<AmmoBox>();
-                hoveredAmmoBox.GetComponent<Outline>().enabled=true;
+                SetHoveredWeapon(hitWeapon);
+                foundInteractable = true;
+
                 if (Input.GetKeyDown(KeyCode.F))
                 {
-                    WeaponManager.Instance.PickUpAmmo(hoveredAmmoBox);
-                    Destroy(hoveredAmmoBox.gameObject);
-                    hoveredAmmoBox = null;
+                    if (WeaponManager.Instance != null)
+                    {
+                        WeaponManager.Instance.pickUpWeapon(hitWeapon.gameObject);
+                    }
+                    ClearHoveredWeapon();
                 }
-            }
-            else
-            {
-                if (hoveredAmmoBox)
-                {
-                    hoveredAmmoBox.GetComponent<Outline>().enabled = false;
-                }
+                break;
             }
 
-            //  Throwable
-            if (objectHitByRaycast.GetComponent<Throwable>())
+            // 2. Ammo Box Detection
+            AmmoBox hitAmmo = obj.GetComponentInParent<AmmoBox>();
+            if (hitAmmo != null)
             {
-                hoveredThrowable=objectHitByRaycast.gameObject.GetComponent<Throwable>();
-                hoveredThrowable.GetComponent<Outline>().enabled=true;
+                SetHoveredAmmoBox(hitAmmo);
+                foundInteractable = true;
+
                 if (Input.GetKeyDown(KeyCode.F))
                 {
-                    WeaponManager.Instance.PickUpThrowable(hoveredThrowable);
+                    if (WeaponManager.Instance != null)
+                    {
+                        WeaponManager.Instance.PickUpAmmo(hitAmmo);
+                    }
+                    if (SoundManager.Instance != null)
+                    {
+                        SoundManager.Instance.PlayAmmoPickupSound();
+                    }
+                    Destroy(hitAmmo.gameObject);
+                    ClearHoveredAmmoBox();
                 }
+                break;
             }
-            else
+
+            // 3. Crystal Detection
+            Crystal hitCrystal = obj.GetComponentInParent<Crystal>();
+            if (hitCrystal != null)
             {
-                if (hoveredThrowable)
+                hoveredCrystal = hitCrystal;
+                foundInteractable = true;
+
+                if (Input.GetKeyDown(KeyCode.F))
                 {
-                    hoveredThrowable.GetComponent<Outline>().enabled = false;
+                    hitCrystal.Collect();
+                    hoveredCrystal = null;
                 }
+                break;
+            }
+
+            // 4. Throwable Detection
+            Throwable hitThrowable = obj.GetComponentInParent<Throwable>();
+            if (hitThrowable != null && !hitThrowable.hasBeenThrown)
+            {
+                SetHoveredThrowable(hitThrowable);
+                foundInteractable = true;
+
+                if (Input.GetKeyDown(KeyCode.F))
+                {
+                    if (WeaponManager.Instance != null)
+                    {
+                        WeaponManager.Instance.PickUpThrowable(hitThrowable);
+                    }
+                    ClearHoveredThrowable();
+                }
+                break;
             }
         }
 
+        // Proximity Fallback: If raycast didn't hit interactable, check within 3.0m of camera
+        if (!foundInteractable)
+        {
+            ClearHoveredWeapon();
+            ClearHoveredAmmoBox();
+            ClearHoveredThrowable();
+            hoveredCrystal = null;
 
+            Vector3 checkOrigin = cam.transform.position;
+            Collider[] nearby = Physics.OverlapSphere(checkOrigin, 3.0f, ~0, QueryTriggerInteraction.Collide);
 
+            float closestDist = float.MaxValue;
+            Weapon closestWeapon = null;
+            AmmoBox closestAmmo = null;
+            Crystal closestCrystal = null;
+            Throwable closestThrowable = null;
 
+            foreach (Collider c in nearby)
+            {
+                if (c.CompareTag("Player") || c.GetComponentInParent<PlayerMovement>() != null) continue;
+
+                Weapon w = c.GetComponentInParent<Weapon>();
+                if (w != null && !w.isActive)
+                {
+                    float d = Vector3.Distance(checkOrigin, w.transform.position);
+                    if (d < closestDist)
+                    {
+                        closestDist = d;
+                        closestWeapon = w;
+                        closestAmmo = null;
+                        closestCrystal = null;
+                        closestThrowable = null;
+                    }
+                    continue;
+                }
+
+                AmmoBox ab = c.GetComponentInParent<AmmoBox>();
+                if (ab != null)
+                {
+                    float d = Vector3.Distance(checkOrigin, ab.transform.position);
+                    if (d < closestDist)
+                    {
+                        closestDist = d;
+                        closestAmmo = ab;
+                        closestWeapon = null;
+                        closestCrystal = null;
+                        closestThrowable = null;
+                    }
+                    continue;
+                }
+
+                Crystal cr = c.GetComponentInParent<Crystal>();
+                if (cr != null)
+                {
+                    float d = Vector3.Distance(checkOrigin, cr.transform.position);
+                    if (d < closestDist)
+                    {
+                        closestDist = d;
+                        closestCrystal = cr;
+                        closestWeapon = null;
+                        closestAmmo = null;
+                        closestThrowable = null;
+                    }
+                    continue;
+                }
+
+                Throwable th = c.GetComponentInParent<Throwable>();
+                if (th != null && !th.hasBeenThrown)
+                {
+                    float d = Vector3.Distance(checkOrigin, th.transform.position);
+                    if (d < closestDist)
+                    {
+                        closestDist = d;
+                        closestThrowable = th;
+                        closestWeapon = null;
+                        closestAmmo = null;
+                        closestCrystal = null;
+                    }
+                    continue;
+                }
+            }
+
+            if (closestWeapon != null)
+            {
+                SetHoveredWeapon(closestWeapon);
+                if (Input.GetKeyDown(KeyCode.F))
+                {
+                    if (WeaponManager.Instance != null)
+                    {
+                        WeaponManager.Instance.pickUpWeapon(closestWeapon.gameObject);
+                    }
+                    ClearHoveredWeapon();
+                }
+            }
+            else if (closestAmmo != null)
+            {
+                SetHoveredAmmoBox(closestAmmo);
+                if (Input.GetKeyDown(KeyCode.F))
+                {
+                    if (WeaponManager.Instance != null)
+                    {
+                        WeaponManager.Instance.PickUpAmmo(closestAmmo);
+                    }
+                    if (SoundManager.Instance != null)
+                    {
+                        SoundManager.Instance.PlayAmmoPickupSound();
+                    }
+                    Destroy(closestAmmo.gameObject);
+                    ClearHoveredAmmoBox();
+                }
+            }
+            else if (closestCrystal != null)
+            {
+                hoveredCrystal = closestCrystal;
+                if (Input.GetKeyDown(KeyCode.F))
+                {
+                    closestCrystal.Collect();
+                    hoveredCrystal = null;
+                }
+            }
+            else if (closestThrowable != null)
+            {
+                SetHoveredThrowable(closestThrowable);
+                if (Input.GetKeyDown(KeyCode.F))
+                {
+                    if (WeaponManager.Instance != null)
+                    {
+                        WeaponManager.Instance.PickUpThrowable(closestThrowable);
+                    }
+                    ClearHoveredThrowable();
+                }
+            }
+        }
+    }
+
+    private void SetHoveredWeapon(Weapon weapon)
+    {
+        if (hoveredWeapon != null && hoveredWeapon != weapon)
+        {
+            Outline prev = hoveredWeapon.GetComponent<Outline>();
+            if (prev != null) prev.enabled = false;
+        }
+
+        hoveredWeapon = weapon;
+        Outline curr = hoveredWeapon.GetComponent<Outline>();
+        if (curr != null) curr.enabled = true;
+    }
+
+    private void ClearHoveredWeapon()
+    {
+        if (hoveredWeapon != null)
+        {
+            Outline outline = hoveredWeapon.GetComponent<Outline>();
+            if (outline != null) outline.enabled = false;
+            hoveredWeapon = null;
+        }
+    }
+
+    private void SetHoveredAmmoBox(AmmoBox box)
+    {
+        if (hoveredAmmoBox != null && hoveredAmmoBox != box)
+        {
+            Outline prev = hoveredAmmoBox.GetComponent<Outline>();
+            if (prev != null) prev.enabled = false;
+        }
+
+        hoveredAmmoBox = box;
+        Outline curr = hoveredAmmoBox.GetComponent<Outline>();
+        if (curr != null) curr.enabled = true;
+    }
+
+    private void ClearHoveredAmmoBox()
+    {
+        if (hoveredAmmoBox != null)
+        {
+            Outline outline = hoveredAmmoBox.GetComponent<Outline>();
+            if (outline != null) outline.enabled = false;
+            hoveredAmmoBox = null;
+        }
+    }
+
+    private void SetHoveredThrowable(Throwable throwable)
+    {
+        if (hoveredThrowable != null && hoveredThrowable != throwable)
+        {
+            Outline prev = hoveredThrowable.GetComponent<Outline>();
+            if (prev != null) prev.enabled = false;
+        }
+
+        hoveredThrowable = throwable;
+        Outline curr = hoveredThrowable.GetComponent<Outline>();
+        if (curr != null) curr.enabled = true;
+    }
+
+    private void ClearHoveredThrowable()
+    {
+        if (hoveredThrowable != null)
+        {
+            Outline outline = hoveredThrowable.GetComponent<Outline>();
+            if (outline != null) outline.enabled = false;
+            hoveredThrowable = null;
+        }
     }
 }
