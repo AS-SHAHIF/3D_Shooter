@@ -107,5 +107,25 @@ public class PlayerMovement : MonoBehaviour
         }
 
         _lastPosition = transform.position;
+
+        // Check if player is moving with WASD keys (GetAxisRaw has NO smoothing delay)
+        bool moving = Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0;
+
+        // Check if player is shooting or aiming
+        bool isShooting = Input.GetKey(KeyCode.Mouse0);
+        bool isAiming = Input.GetMouseButton(1);
+
+        // Only play the high-ready running animation if moving AND NOT shooting AND NOT aiming!
+        bool shouldRunPose = moving && !isShooting && !isAiming;
+
+        // Pass to the weapon/hands animator:
+        if (WeaponManager.Instance != null && WeaponManager.Instance.activeWeaponSlot != null)
+        {
+            Animator weaponAnim = WeaponManager.Instance.activeWeaponSlot.GetComponentInChildren<Animator>();
+            if (weaponAnim != null)
+            {
+                weaponAnim.SetBool("isRunning", shouldRunPose);
+            }
+        }
     }
 }
