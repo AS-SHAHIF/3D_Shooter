@@ -5,11 +5,32 @@ using UnityEngine.SceneManagement;
 public class MainMenu : MonoBehaviour
 {
     [SerializeField] private TMP_Text highScoreUI;
+    [SerializeField] private TMP_Text totalCrystalsUI; // <-- New field for your crystal text
     [SerializeField] private GameObject settingsPanel;
     public string newGameScene = "SampleScene";
     public AudioClip bg_music;
     public AudioSource main_channel;
     public UnityEngine.Audio.AudioMixer audioMixer;
+
+    private void OnEnable()
+    {
+        // Automatically listens for any crystal balance changes and updates immediately
+        CrystalSaveSystem.OnCrystalsChanged += UpdateTotalCrystalsUI;
+        UpdateTotalCrystalsUI(CrystalSaveSystem.Total);
+    }
+
+    private void OnDisable()
+    {
+        CrystalSaveSystem.OnCrystalsChanged -= UpdateTotalCrystalsUI;
+    }
+
+    private void UpdateTotalCrystalsUI(int total)
+    {
+        if (totalCrystalsUI != null)
+        {
+            totalCrystalsUI.text = $"Crystals: {total}";
+        }
+    }
 
     private void Start()
     {
@@ -38,7 +59,7 @@ public class MainMenu : MonoBehaviour
             main_channel.Play();
         }
 
-        // set the high score
+        // Set the high score
         if (SaveLoadManager.Instance != null)
         {
             int highScore = SaveLoadManager.Instance.LoadHighScore();
@@ -76,7 +97,7 @@ public class MainMenu : MonoBehaviour
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
 #else
-    Application.Quit();
+        Application.Quit();
 #endif
     }
 }

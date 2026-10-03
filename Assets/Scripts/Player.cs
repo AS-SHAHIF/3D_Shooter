@@ -49,6 +49,9 @@ public class Player : MonoBehaviour
 
     private void PlayerDead()
     {
+        // Save collected crystals permanently to disk
+        CrystalSaveSystem.Save();
+
         if (SoundManager.Instance != null && SoundManager.Instance.playerChannel != null)
         {
             if (SoundManager.Instance.playerDie != null)

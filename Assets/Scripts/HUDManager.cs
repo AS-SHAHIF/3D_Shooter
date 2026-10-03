@@ -26,8 +26,9 @@ public class HUDManager : MonoBehaviour
 
     public GameObject middleDot;
     
-    [Header("Crystals")]
+    [Header("Crystals (Current Match)")]
     public TextMeshProUGUI crystalsCollectedUI;
+    public int matchCrystals = 0;
 
     private void Awake()
     {
@@ -38,6 +39,19 @@ public class HUDManager : MonoBehaviour
         {
             Instance=this;
         }
+    }
+
+    private void Start()
+    {
+        // Each new match, reset current match crystal count to zero
+        matchCrystals = 0;
+        UpdateCrystalCount(matchCrystals);
+    }
+
+    public void AddMatchCrystals(int amount)
+    {
+        matchCrystals += amount;
+        UpdateCrystalCount(matchCrystals);
     }
 
     public void UpdateCrystalCount(int count)

@@ -23,6 +23,9 @@ public class Enemy : MonoBehaviour
         {
             isDead = true;
 
+            // Roll loot drops (ammo, crystals)
+            GetComponent<ZombieLootDropper>()?.TryDrop();
+
             int randomValue = Random.Range(0, 2);
             if (animator != null)
             {

@@ -79,6 +79,12 @@ public class PlayerMovement : MonoBehaviour
         float x = Input.GetAxisRaw("Horizontal");
         float y = Input.GetAxisRaw("Vertical");
 
+        if (MobileInputManager.Instance != null && MobileInputManager.Instance.moveInput.sqrMagnitude > 0)
+        {
+            x = MobileInputManager.Instance.moveInput.x;
+            y = MobileInputManager.Instance.moveInput.y;
+        }
+
         if (animator != null)
         {
             animator.SetBool("IsWalkingForward", y > 0);
@@ -86,7 +92,8 @@ public class PlayerMovement : MonoBehaviour
 
         Vector3 moveDirection = (transform.right * x + transform.forward * y).normalized;
 
-        if (Input.GetButtonDown("Jump") && _isGround)
+        bool jumpPressed = Input.GetButtonDown("Jump") || (MobileInputManager.Instance != null && MobileInputManager.Instance.isJumpTriggered);
+        if (jumpPressed && _isGround)
         {
             velocity.y = Mathf.Sqrt(_jumpHeight * -2f * _gravity);
         }
@@ -108,11 +115,11 @@ public class PlayerMovement : MonoBehaviour
 
         _lastPosition = transform.position;
 
-        // Check if player is moving with WASD keys (GetAxisRaw has NO smoothing delay)
-        bool moving = Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0;
+        // Check if player is moving (keyboard or joystick)
+        bool moving = (x != 0 || y != 0);
 
-        // Check if player is shooting or aiming
-        bool isShooting = Input.GetKey(KeyCode.Mouse0);
+        // Check if player is shooting or aiming (mouse or mobile fire button)
+        bool isShooting = Input.GetKey(KeyCode.Mouse0) || (MobileInputManager.Instance != null && MobileInputManager.Instance.isFireHeld);
         bool isAiming = Input.GetMouseButton(1);
 
         // Only play the high-ready running animation if moving AND NOT shooting AND NOT aiming!

@@ -157,14 +157,16 @@ public class Weapon : MonoBehaviour
             ExitADS();
         }
 
-        // Detect shooting input
+        // Detect shooting input (PC Mouse OR Mobile Fire Button)
+        bool mobileFire = MobileInputManager.Instance != null && MobileInputManager.Instance.isFireHeld;
+
         if (currentShootMode == ShootingMode.Auto)
         {
-            isShooting = Input.GetKey(KeyCode.Mouse0);
+            isShooting = Input.GetKey(KeyCode.Mouse0) || mobileFire;
         }
         else if (currentShootMode == ShootingMode.Single || currentShootMode == ShootingMode.Burst)
         {
-            isShooting = Input.GetKeyDown(KeyCode.Mouse0);
+            isShooting = Input.GetKeyDown(KeyCode.Mouse0) || mobileFire;
         }
 
         // Manual reload
@@ -192,7 +194,7 @@ public class Weapon : MonoBehaviour
         }
     }
 
-    private void EnterADS()
+    public void EnterADS()
     {
         if (animator != null) animator.SetTrigger("enterADS");
         isADS = true;
@@ -203,7 +205,7 @@ public class Weapon : MonoBehaviour
         spreadIntensity = adsSpreadIntensity;
     }
 
-    private void ExitADS()
+    public void ExitADS()
     {
         if (animator != null) animator.SetTrigger("exitADS");
         isADS = false;
@@ -279,7 +281,7 @@ public class Weapon : MonoBehaviour
         }
     }
 
-    private void Reload()
+    public void Reload()
     {
         if (isReloading) return;
 

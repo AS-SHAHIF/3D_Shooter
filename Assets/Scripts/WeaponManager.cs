@@ -220,6 +220,31 @@ public class WeaponManager : MonoBehaviour
         }
     }
 
+    public void AddAmmoDirect(int amount)
+    {
+        if (activeWeaponSlot != null && activeWeaponSlot.transform.childCount > 0)
+        {
+            Weapon currentWeapon = activeWeaponSlot.transform.GetChild(0).GetComponent<Weapon>();
+            if (currentWeapon != null && currentWeapon.thisWeaponModel == Weapon.WeaponModel.pistol)
+            {
+                _totalPistolAmmo += amount;
+                return;
+            }
+        }
+
+        _totalRifleAmmo += amount;
+    }
+
+    public void AddGrenade(int count = 1)
+    {
+        equippedLethalType = Throwable.ThrowableType.Grenade;
+        lethalsCount = Mathf.Min(lethalsCount + count, maxLethals);
+        if (HUDManager.Instance != null)
+        {
+            HUDManager.Instance.UpdateThrowablesUI();
+        }
+    }
+
     private void DropCurrentWeapon(GameObject pickedUpWeapon)
     {
         if (activeWeaponSlot == null || activeWeaponSlot.transform.childCount <= 0) return;
@@ -260,7 +285,7 @@ public class WeaponManager : MonoBehaviour
         }
     }
 
-    private void SwitchActiveSlot(int slotNumber)
+    public void SwitchActiveSlot(int slotNumber)
     {
         if (weaponSlots == null || slotNumber < 0 || slotNumber >= weaponSlots.Count) return;
 
@@ -354,7 +379,7 @@ public class WeaponManager : MonoBehaviour
         }
     }
 
-    private void ThrowLathel()
+    public void ThrowLathel()
     {
         GameObject lathelPrefab = GetThrowablePrefab(equippedLethalType);
         if (lathelPrefab == null || throwableSpawn == null || Camera.main == null) return;
@@ -372,7 +397,7 @@ public class WeaponManager : MonoBehaviour
         if (HUDManager.Instance != null) HUDManager.Instance.UpdateThrowablesUI();
     }
 
-    private void ThrowTactical()
+    public void ThrowTactical()
     {
         GameObject tacticalPrefab = GetThrowablePrefab(equippedTacticalType);
         if (tacticalPrefab == null || throwableSpawn == null || Camera.main == null) return;
