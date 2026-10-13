@@ -7,22 +7,50 @@ using UnityEngine.UI;
 
 public class Player : MonoBehaviour
 {
+    [Header("Health Settings")]
+    public int maxHP = 100;
     public int HP = 100;
-    public GameObject bloodyScreen;
+
+    [Header("Health UI")]
+    public Slider healthSlider;
+    public Image healthBarFill;
     public TextMeshProUGUI playerHealthUI;
+    public GameObject healthBarRoot;
+
+    public GameObject bloodyScreen;
     public TextMeshProUGUI gameOverUI;
     private bool isDead;
 
     private void Start()
     {
+        if (maxHP <= 0) maxHP = HP > 0 ? HP : 100;
+        UpdateHealthUI();
+    }
+
+    public void UpdateHealthUI()
+    {
+        if (healthSlider != null)
+        {
+            healthSlider.maxValue = maxHP;
+            healthSlider.value = Mathf.Max(0, HP);
+        }
+
+        if (healthBarFill != null)
+        {
+            healthBarFill.fillAmount = Mathf.Clamp01((float)HP / maxHP);
+        }
+
         if (playerHealthUI != null)
         {
-            playerHealthUI.text = $"Health:{HP}";
+            playerHealthUI.text = $"{Mathf.Max(0, HP)}";
         }
     }
+
     public void TakeDamage(int damageAmount)
     {
         HP -= damageAmount;
+        UpdateHealthUI();
+
         if (HP <= 0)
         {
             print("Player is Dead");
@@ -35,10 +63,6 @@ public class Player : MonoBehaviour
             if (bloodyScreen != null)
             {
                 StartCoroutine(BloodyScreenEffect());
-            }
-            if (playerHealthUI != null)
-            {
-                playerHealthUI.text = $"Health:{HP}";
             }
             if (SoundManager.Instance != null && SoundManager.Instance.playerChannel != null && SoundManager.Instance.playerHurt != null)
             {
@@ -81,7 +105,9 @@ public class Player : MonoBehaviour
         {
             Debug.LogWarning("No Animation component found for death animation.");
         }
-        playerHealthUI.gameObject.SetActive(false);
+        if (playerHealthUI != null) playerHealthUI.gameObject.SetActive(false);
+        if (healthBarRoot != null) healthBarRoot.SetActive(false);
+        else if (healthSlider != null) healthSlider.gameObject.SetActive(false);
         GetComponentInParent<ScreenFader>().StartFade();
         StartCoroutine(GameOverUI());
     }

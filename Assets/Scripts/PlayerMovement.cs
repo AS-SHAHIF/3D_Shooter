@@ -59,6 +59,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void Update()
     {
+        if (PauseManager.IsPaused) return;
         if (characterController == null) return;
 
         // Ground check
@@ -119,7 +120,10 @@ public class PlayerMovement : MonoBehaviour
         bool moving = (x != 0 || y != 0);
 
         // Check if player is shooting or aiming (mouse or mobile fire button)
-        bool isShooting = Input.GetKey(KeyCode.Mouse0) || (MobileInputManager.Instance != null && MobileInputManager.Instance.isFireHeld);
+        bool mobileFire = MobileInputManager.Instance != null && MobileInputManager.Instance.isFireHeld;
+        bool isPointerOverUI = UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject();
+        bool pcFire = !Application.isMobilePlatform && Cursor.lockState == CursorLockMode.Locked && !isPointerOverUI;
+        bool isShooting = (pcFire && Input.GetKey(KeyCode.Mouse0)) || mobileFire;
         bool isAiming = Input.GetMouseButton(1);
 
         // Only play the high-ready running animation if moving AND NOT shooting AND NOT aiming!

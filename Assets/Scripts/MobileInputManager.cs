@@ -17,6 +17,8 @@ public class MobileInputManager : MonoBehaviour
     [Header("Virtual Joystick Reference")]
     public VirtualJoystick virtualJoystick;
 
+    private PickupDetector pickupDetector;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -47,20 +49,14 @@ public class MobileInputManager : MonoBehaviour
         isJumpTriggered = false;
     }
 
-    // ==========================================
-    // 1. FIRE BUTTON (Hold for auto, tap for single)
-    // ==========================================
+    // 1. FIRE BUTTON
     public void OnFirePointerDown() => isFireHeld = true;
     public void OnFirePointerUp() => isFireHeld = false;
 
-    // ==========================================
     // 2. JUMP BUTTON
-    // ==========================================
     public void OnJumpPressed() => isJumpTriggered = true;
 
-    // ==========================================
     // 3. RELOAD BUTTON
-    // ==========================================
     public void OnReloadPressed()
     {
         if (WeaponManager.Instance != null && WeaponManager.Instance.activeWeaponSlot != null)
@@ -73,9 +69,7 @@ public class MobileInputManager : MonoBehaviour
         }
     }
 
-    // ==========================================
-    // 4. ADS / AIM BUTTON (Toggle scope/aim)
-    // ==========================================
+    // 4. ADS / AIM BUTTON
     public void OnADSPressed()
     {
         if (WeaponManager.Instance != null && WeaponManager.Instance.activeWeaponSlot != null)
@@ -95,9 +89,7 @@ public class MobileInputManager : MonoBehaviour
         }
     }
 
-    // ==========================================
-    // 5. WEAPON SWITCH BUTTON (Toggle Rifle / Pistol)
-    // ==========================================
+    // 5. WEAPON SWITCH BUTTON
     public void OnSwitchWeaponPressed()
     {
         if (WeaponManager.Instance != null && WeaponManager.Instance.weaponSlots != null && WeaponManager.Instance.weaponSlots.Count > 1)
@@ -108,9 +100,23 @@ public class MobileInputManager : MonoBehaviour
         }
     }
 
-    // ==========================================
     // 6. GRENADE BUTTON
-    // ==========================================
+    public void OnGrenadePointerDown()
+    {
+        if (WeaponManager.Instance != null)
+        {
+            WeaponManager.Instance.StartChargingThrow();
+        }
+    }
+
+    public void OnGrenadePointerUp()
+    {
+        if (WeaponManager.Instance != null)
+        {
+            WeaponManager.Instance.ReleaseChargingThrow();
+        }
+    }
+
     public void OnGrenadePressed()
     {
         if (WeaponManager.Instance != null && WeaponManager.Instance.lethalsCount > 0)
@@ -119,14 +125,24 @@ public class MobileInputManager : MonoBehaviour
         }
     }
 
-    // ==========================================
-    // 7. INTERACT / PICKUP WEAPON BUTTON ("F")
-    // ==========================================
+    // 7. INTERACT BUTTON: weapon pickup first, then nearest zombie drop
     public void OnInteractPressed()
     {
+        // Weapon on the ground you're looking at takes priority
         if (InteractionManager.Instance != null && InteractionManager.Instance.hoveredWeapon != null)
         {
             WeaponManager.Instance?.pickUpWeapon(InteractionManager.Instance.hoveredWeapon.gameObject);
+            return;
+        }
+
+        // Otherwise grab the nearest zombie drop
+        if (pickupDetector == null)
+        {
+            pickupDetector = Object.FindFirstObjectByType<PickupDetector>();
+        }
+        if (pickupDetector != null)
+        {
+            pickupDetector.CollectNearest();
         }
     }
 }

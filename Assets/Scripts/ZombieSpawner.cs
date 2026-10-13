@@ -35,7 +35,7 @@ public class ZombieSpawner : MonoBehaviour
         currentZombieAlive.Clear();
         currentWave++;
         GlobalReferences.Instance.waveNumber = currentWave;
-        currentWaveUI.text = "Wave:" + currentWave.ToString();
+        currentWaveUI.text = currentWave.ToString();
         StartCoroutine(SpawnWave());
     }
 

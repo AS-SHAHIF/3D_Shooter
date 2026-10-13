@@ -128,10 +128,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CrystalPickup
   amount: 1
-  lifetime: 15
+  lifetime: 40
   spinSpeed: 90
   bobHeight: 0.15
   bobSpeed: 3
+  displayName: crystal
+  icon: {fileID: -35719622, guid: 68e828a07f9b47741b7b110201ef925a, type: 3}
 --- !u!65 &5927730040438225759
 BoxCollider:
   m_ObjectHideFlags: 0

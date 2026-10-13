@@ -58,7 +58,7 @@ public class HUDManager : MonoBehaviour
     {
         if (crystalsCollectedUI != null)
         {
-            crystalsCollectedUI.text = $"Crystals: {count}";
+            crystalsCollectedUI.text = $"{count}";
         }
     }
 

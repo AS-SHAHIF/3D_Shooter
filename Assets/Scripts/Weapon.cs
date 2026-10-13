@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class Weapon : MonoBehaviour
 {
@@ -142,6 +143,7 @@ public class Weapon : MonoBehaviour
 
     void Update()
     {
+        if (PauseManager.IsPaused) return;
         if (!isActive) return;
 
         // Skip everything if reloading
@@ -157,16 +159,22 @@ public class Weapon : MonoBehaviour
             ExitADS();
         }
 
-        // Detect shooting input (PC Mouse OR Mobile Fire Button)
+        // Detect shooting input
         bool mobileFire = MobileInputManager.Instance != null && MobileInputManager.Instance.isFireHeld;
+
+        // Check if pointer/touch is over any UI element (Touch Area, Joystick, buttons)
+        bool isPointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+
+        // PC mouse firing: only when not on mobile, cursor is locked into the game, and not clicking on UI
+        bool pcFire = !Application.isMobilePlatform && Cursor.lockState == CursorLockMode.Locked && !isPointerOverUI;
 
         if (currentShootMode == ShootingMode.Auto)
         {
-            isShooting = Input.GetKey(KeyCode.Mouse0) || mobileFire;
+            isShooting = (pcFire && Input.GetKey(KeyCode.Mouse0)) || mobileFire;
         }
         else if (currentShootMode == ShootingMode.Single || currentShootMode == ShootingMode.Burst)
         {
-            isShooting = Input.GetKeyDown(KeyCode.Mouse0) || mobileFire;
+            isShooting = (pcFire && Input.GetKeyDown(KeyCode.Mouse0)) || mobileFire;
         }
 
         // Manual reload

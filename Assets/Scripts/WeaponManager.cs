@@ -69,6 +69,14 @@ public class WeaponManager : MonoBehaviour
             }
         }
         UpdateFpsHandsVisibility();
+
+        // Ensure a GrenadeTrajectoryLine instance exists
+        if (GrenadeTrajectoryLine.Instance == null)
+        {
+            GameObject trajObj = new GameObject("GrenadeTrajectoryLine");
+            trajObj.transform.SetParent(transform);
+            trajObj.AddComponent<GrenadeTrajectoryLine>();
+        }
     }
 
     private void Update()
@@ -92,7 +100,14 @@ public class WeaponManager : MonoBehaviour
         {
             SwitchActiveSlot(1);
         }
-        if (Input.GetKey(KeyCode.G) || Input.GetKey(KeyCode.T))
+        if (Input.GetKey(KeyCode.G))
+        {
+            if (lethalsCount > 0)
+            {
+                isChargingThrow = true;
+            }
+        }
+        else if (Input.GetKey(KeyCode.T))
         {
             forceMultiplier += Time.deltaTime;
             if (forceMultiplier > forceMultiplierLimit)
@@ -101,8 +116,20 @@ public class WeaponManager : MonoBehaviour
             }
         }
 
+        if (isChargingThrow)
+        {
+            forceMultiplier += Time.deltaTime;
+            if (forceMultiplier > forceMultiplierLimit)
+            {
+                forceMultiplier = forceMultiplierLimit;
+            }
+            DrawGrenadeTrajectory();
+        }
+
         if (Input.GetKeyUp(KeyCode.G))
         {
+            isChargingThrow = false;
+            HideGrenadeTrajectory();
             if (lethalsCount > 0)
             {
                 ThrowLathel();
@@ -382,37 +409,104 @@ public class WeaponManager : MonoBehaviour
     public void ThrowLathel()
     {
         GameObject lathelPrefab = GetThrowablePrefab(equippedLethalType);
-        if (lathelPrefab == null || throwableSpawn == null || Camera.main == null) return;
+        if (lathelPrefab == null || Camera.main == null) return;
 
-        GameObject throwable = Instantiate(lathelPrefab, throwableSpawn.transform.position, Camera.main.transform.rotation);
-        Rigidbody rb = throwable.GetComponent<Rigidbody>();
-        if (rb != null) rb.AddForce(Camera.main.transform.forward * (throwForce * forceMultiplier), ForceMode.Impulse);
-        Throwable th = throwable.GetComponent<Throwable>();
+        Vector3 spawnPos = throwableSpawn != null ? throwableSpawn.transform.position : (Camera.main.transform.position + Camera.main.transform.forward * 0.8f);
+
+        GameObject throwable = Instantiate(lathelPrefab, spawnPos, Camera.main.transform.rotation);
+        Rigidbody rb = throwable.GetComponent<Rigidbody>() ?? throwable.GetComponentInChildren<Rigidbody>();
+        if (rb != null)
+        {
+            float multiplier = forceMultiplier > 0.2f ? forceMultiplier : 1.2f;
+            float speed = (throwForce > 5f ? throwForce : 18f) * multiplier;
+            Vector3 throwDir = (Camera.main.transform.forward + Camera.main.transform.up * 0.2f).normalized;
+            rb.linearVelocity = Vector3.zero;
+            rb.AddForce(throwDir * speed, ForceMode.Impulse);
+            rb.AddTorque(UnityEngine.Random.insideUnitSphere * 8f, ForceMode.Impulse);
+        }
+
+        Throwable th = throwable.GetComponent<Throwable>() ?? throwable.GetComponentInChildren<Throwable>();
         if (th != null) th.hasBeenThrown = true;
+
         lethalsCount -= 1;
         if (lethalsCount <= 0)
         {
             equippedLethalType = Throwable.ThrowableType.None;
         }
+        forceMultiplier = 0;
         if (HUDManager.Instance != null) HUDManager.Instance.UpdateThrowablesUI();
     }
 
     public void ThrowTactical()
     {
         GameObject tacticalPrefab = GetThrowablePrefab(equippedTacticalType);
-        if (tacticalPrefab == null || throwableSpawn == null || Camera.main == null) return;
+        if (tacticalPrefab == null || Camera.main == null) return;
 
-        GameObject throwable = Instantiate(tacticalPrefab, throwableSpawn.transform.position, Camera.main.transform.rotation);
-        Rigidbody rb = throwable.GetComponent<Rigidbody>();
-        if (rb != null) rb.AddForce(Camera.main.transform.forward * (throwForce * forceMultiplier), ForceMode.Impulse);
-        Throwable th = throwable.GetComponent<Throwable>();
+        Vector3 spawnPos = throwableSpawn != null ? throwableSpawn.transform.position : (Camera.main.transform.position + Camera.main.transform.forward * 0.8f);
+
+        GameObject throwable = Instantiate(tacticalPrefab, spawnPos, Camera.main.transform.rotation);
+        Rigidbody rb = throwable.GetComponent<Rigidbody>() ?? throwable.GetComponentInChildren<Rigidbody>();
+        if (rb != null)
+        {
+            float multiplier = forceMultiplier > 0.2f ? forceMultiplier : 1.2f;
+            float speed = (throwForce > 5f ? throwForce : 18f) * multiplier;
+            Vector3 throwDir = (Camera.main.transform.forward + Camera.main.transform.up * 0.2f).normalized;
+            rb.linearVelocity = Vector3.zero;
+            rb.AddForce(throwDir * speed, ForceMode.Impulse);
+            rb.AddTorque(UnityEngine.Random.insideUnitSphere * 8f, ForceMode.Impulse);
+        }
+
+        Throwable th = throwable.GetComponent<Throwable>() ?? throwable.GetComponentInChildren<Throwable>();
         if (th != null) th.hasBeenThrown = true;
+
         tacticalsCount -= 1;
         if (tacticalsCount <= 0)
         {
             equippedTacticalType = Throwable.ThrowableType.None;
         }
+        forceMultiplier = 0;
         if (HUDManager.Instance != null) HUDManager.Instance.UpdateThrowablesUI();
+    }
+
+    [HideInInspector] public bool isChargingThrow = false;
+
+    public void StartChargingThrow()
+    {
+        if (lethalsCount > 0)
+        {
+            isChargingThrow = true;
+        }
+    }
+
+    public void ReleaseChargingThrow()
+    {
+        if (isChargingThrow)
+        {
+            isChargingThrow = false;
+            ThrowLathel();
+            HideGrenadeTrajectory();
+        }
+    }
+
+    public void DrawGrenadeTrajectory()
+    {
+        if (GrenadeTrajectoryLine.Instance == null || Camera.main == null) return;
+
+        Vector3 spawnPos = throwableSpawn != null ? throwableSpawn.transform.position : (Camera.main.transform.position + Camera.main.transform.forward * 0.8f);
+        float multiplier = forceMultiplier > 0.2f ? forceMultiplier : 1.2f;
+        float speed = (throwForce > 5f ? throwForce : 18f) * multiplier;
+        Vector3 throwDir = (Camera.main.transform.forward + Camera.main.transform.up * 0.2f).normalized;
+        Vector3 initialVelocity = throwDir * speed;
+
+        GrenadeTrajectoryLine.Instance.DrawTrajectory(spawnPos, initialVelocity);
+    }
+
+    public void HideGrenadeTrajectory()
+    {
+        if (GrenadeTrajectoryLine.Instance != null)
+        {
+            GrenadeTrajectoryLine.Instance.HideTrajectory();
+        }
     }
 
     private void PickUpThrowablesAsLethal(Throwable.ThrowableType lethal)

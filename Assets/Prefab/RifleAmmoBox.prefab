@@ -177,10 +177,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AmmoPickup
   amount: 30
-  lifetime: 15
+  lifetime: 60
   spinSpeed: 90
   bobHeight: 0.15
   bobSpeed: 3
+  displayName: rifle ammo
+  icon: {fileID: -1634456856, guid: 39ebaf525a1b6dd4aae0fe81cace76d5, type: 3}
 --- !u!1 &7015908152030421483 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6080596665305963236, guid: 45fb3b613218da844b047d1f9349e0d6,

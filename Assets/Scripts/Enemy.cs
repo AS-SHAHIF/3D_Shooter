@@ -4,6 +4,9 @@ using UnityEngine.AI;
 public class Enemy : MonoBehaviour
 {
     [SerializeField] private int HP = 100;
+    [SerializeField] private ZombieHealthBar healthBar;
+    private ZombieAudio zombieAudio;
+    private int maxHP;
     private Animator animator;
     private NavMeshAgent navAgent;
     public bool isDead;
@@ -12,6 +15,9 @@ public class Enemy : MonoBehaviour
     {
         animator = GetComponent<Animator>();
         navAgent = GetComponent<NavMeshAgent>();
+        zombieAudio = GetComponent<ZombieAudio>();
+        maxHP = HP;
+        if (healthBar != null) healthBar.SetHealth(HP, maxHP);
     }
 
     public void TakeDamage(int damageAmount)
@@ -19,11 +25,14 @@ public class Enemy : MonoBehaviour
         if (isDead) return;
 
         HP -= damageAmount;
+
+        if (healthBar != null) healthBar.SetHealth(Mathf.Max(0, HP), maxHP);
         if (HP <= 0)
         {
             isDead = true;
+            if (healthBar != null) healthBar.Hide();
 
-            // Roll loot drops (ammo, crystals)
+                // Roll loot drops (ammo, crystals)
             GetComponent<ZombieLootDropper>()?.TryDrop();
 
             int randomValue = Random.Range(0, 2);
@@ -52,9 +61,14 @@ public class Enemy : MonoBehaviour
                 col.enabled = false;
             }
 
-            if (SoundManager.Instance != null && SoundManager.Instance.zombieChannel2 != null && SoundManager.Instance.zombieDeath != null)
+            // if (SoundManager.Instance != null && SoundManager.Instance.zombieChannel2 != null && SoundManager.Instance.zombieDeath != null)
+            // {
+            //     SoundManager.Instance.zombieChannel2.PlayOneShot(SoundManager.Instance.zombieDeath);
+            // }
+            if (zombieAudio != null)
             {
-                SoundManager.Instance.zombieChannel2.PlayOneShot(SoundManager.Instance.zombieDeath);
+                zombieAudio.StopLoop();   // stop walking/chase sound
+                zombieAudio.PlayDeath();
             }
 
             // Destroy body after death animation finishes
@@ -66,10 +80,11 @@ public class Enemy : MonoBehaviour
             {
                 animator.SetTrigger("DAMAGE");
             }
-            if (SoundManager.Instance != null && SoundManager.Instance.zombieChannel2 != null && SoundManager.Instance.zombieHurt != null)
-            {
-                SoundManager.Instance.zombieChannel2.PlayOneShot(SoundManager.Instance.zombieHurt);
-            }
+            // if (SoundManager.Instance != null && SoundManager.Instance.zombieChannel2 != null && SoundManager.Instance.zombieHurt != null)
+            // {
+            //     SoundManager.Instance.zombieChannel2.PlayOneShot(SoundManager.Instance.zombieHurt);
+            // }
+            if (zombieAudio != null) zombieAudio.PlayHurt();
         }
     }
 
