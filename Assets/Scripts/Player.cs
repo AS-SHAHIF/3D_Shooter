@@ -108,8 +108,25 @@ public class Player : MonoBehaviour
         if (playerHealthUI != null) playerHealthUI.gameObject.SetActive(false);
         if (healthBarRoot != null) healthBarRoot.SetActive(false);
         else if (healthSlider != null) healthSlider.gameObject.SetActive(false);
-        GetComponentInParent<ScreenFader>().StartFade();
-        StartCoroutine(GameOverUI());
+
+        if (DeathRespawnManager.Instance != null)
+        {
+            // Death & Respawn system: show the death popup (respawn / give up) instead of
+            // the old auto Game Over flow. The manager handles fading, high score and the
+            // return to the Main Menu.
+            DeathRespawnManager.Instance.OnPlayerDeath();
+        }
+        else
+        {
+            GetComponentInParent<ScreenFader>().StartFade();
+            StartCoroutine(GameOverUI());
+        }
+    }
+
+    /// <summary>Called by DeathRespawnManager when the player respawns.</summary>
+    public void ResetDeadState()
+    {
+        isDead = false;
     }
 
     private IEnumerator GameOverUI()

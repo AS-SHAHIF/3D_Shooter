@@ -105,6 +105,10 @@ public class ZombieSpawner : MonoBehaviour
         inCoolDown = false;
         waveOverUI.gameObject.SetActive(false);
 
+        // Recommendation A: save XP after each completed wave, so the player keeps
+        // earned XP even if they die, respawn, or lose the run.
+        XPSystem.CommitRunXP();
+
         currentZombiePerWave *= 2;
         StartNextWave();
     }

@@ -42,6 +42,13 @@ public class CrystalManager : MonoBehaviour
     {
         crystalsCollected++;
 
+        // Track as a run crystal that is not in the permanent bank yet
+        // (reconciled once when the run ends or a respawn is paid for).
+        if (DeathRespawnManager.Instance != null)
+        {
+            DeathRespawnManager.Instance.RegisterRunCrystal(1);
+        }
+
         if (HUDManager.Instance != null)
         {
             HUDManager.Instance.UpdateCrystalCount(crystalsCollected);

@@ -35,6 +35,9 @@ public class Enemy : MonoBehaviour
                 // Roll loot drops (ammo, crystals)
             GetComponent<ZombieLootDropper>()?.TryDrop();
 
+            // Award Run XP per zombie kill
+            XPSystem.AddRunXP(10);
+
             int randomValue = Random.Range(0, 2);
             if (animator != null)
             {
