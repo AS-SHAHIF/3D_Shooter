@@ -91,7 +91,14 @@ public class PlayerMovement : MonoBehaviour
             animator.SetBool("IsWalkingForward", y > 0);
         }
 
-        Vector3 moveDirection = (transform.right * x + transform.forward * y).normalized;
+        Vector3 forward = transform.forward;
+        Vector3 right = transform.right;
+        forward.y = 0f;
+        right.y = 0f;
+        forward.Normalize();
+        right.Normalize();
+
+        Vector3 moveDirection = (right * x + forward * y).normalized;
 
         bool jumpPressed = Input.GetButtonDown("Jump") || (MobileInputManager.Instance != null && MobileInputManager.Instance.isJumpTriggered);
         if (jumpPressed && _isGround)

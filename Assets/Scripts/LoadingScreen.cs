@@ -12,38 +12,56 @@ public class LoadingScreen : MonoBehaviour
 
     private void Start()
     {
+        Time.timeScale = 1f;
+        AudioListener.pause = false;
+
         StartCoroutine(LoadAsync());
-        StartCoroutine(LoadingTextBar());
+        if (loadingText != null)
+        {
+            StartCoroutine(LoadingTextBar());
+        }
     }
 
     IEnumerator LoadingTextBar()
     {
         while (true)
         {
-            loadingText.text = "Loading.";
-            yield return new WaitForSeconds(0.3f);
+            if (loadingText != null) loadingText.text = "Loading.";
+            yield return new WaitForSecondsRealtime(0.3f);
             
-            loadingText.text = "Loading..";
-            yield return new WaitForSeconds(0.3f);
+            if (loadingText != null) loadingText.text = "Loading..";
+            yield return new WaitForSecondsRealtime(0.3f);
 
-            loadingText.text = "Loading...";
-            yield return new WaitForSeconds(0.3f);
-
+            if (loadingText != null) loadingText.text = "Loading...";
+            yield return new WaitForSecondsRealtime(0.3f);
         }
     }
 
     IEnumerator LoadAsync()
     {
-        AsyncOperation operation = SceneManager.LoadSceneAsync(LoadingManager.nextScene);
+        string targetScene = string.IsNullOrEmpty(LoadingManager.nextScene) ? "SampleScene" : LoadingManager.nextScene;
+        AsyncOperation operation = SceneManager.LoadSceneAsync(targetScene);
+        if (operation == null)
+        {
+            yield break;
+        }
+
         operation.allowSceneActivation = false;
         while (!operation.isDone)
         {
             float progress = Mathf.Clamp01(operation.progress / 0.9f);
-            progressBar.value = progress;
+            if (progressBar != null)
+            {
+                progressBar.value = progress;
+            }
+
             if (operation.progress >= 0.9f)
             {
-                progressBar.value = 1f;
-                yield return new WaitForSeconds(1f);
+                if (progressBar != null)
+                {
+                    progressBar.value = 1f;
+                }
+                yield return new WaitForSecondsRealtime(0.5f);
                 operation.allowSceneActivation = true;
             }
             yield return null;

@@ -23,6 +23,23 @@ public class MouseMovement : MonoBehaviour
         {
             _mouseSensitivity = 150f;
         }
+
+        SyncRotationWithTransform();
+    }
+
+    public void SyncRotationWithTransform()
+    {
+        Vector3 currentEuler = transform.localEulerAngles;
+        _yRotation = currentEuler.y;
+        float currentX = currentEuler.x;
+        if (currentX > 180f)
+        {
+            currentX -= 360f;
+        }
+
+        float minClamp = Mathf.Min(_topClamp, _bottomClamp);
+        float maxClamp = Mathf.Max(_topClamp, _bottomClamp);
+        _xRotation = Mathf.Clamp(currentX, minClamp, maxClamp);
     }
 
     private void ApplyCursorState()
@@ -33,6 +50,8 @@ public class MouseMovement : MonoBehaviour
 
     void Update()
     {
+        if (PauseManager.IsPaused) return;
+
         // Press Left Alt or Escape to toggle mouse cursor visibility for testing UI buttons
         if (Input.GetKeyDown(KeyCode.LeftAlt) || Input.GetKeyDown(KeyCode.Escape))
         {
@@ -44,7 +63,7 @@ public class MouseMovement : MonoBehaviour
         float mouseX = 0f;
         float mouseY = 0f;
 
-        if (!unlockCursor)
+        if (!unlockCursor && !Application.isMobilePlatform)
         {
             mouseX = Input.GetAxis("Mouse X") * _mouseSensitivity * Time.deltaTime;
             mouseY = Input.GetAxis("Mouse Y") * _mouseSensitivity * Time.deltaTime;
@@ -60,17 +79,15 @@ public class MouseMovement : MonoBehaviour
         // rotation around x-axis
         _xRotation -= mouseY;
 
-        // clamp the roation
-        _xRotation = Mathf.Clamp(_xRotation, _topClamp, _bottomClamp);
+        // clamp the rotation
+        float minClamp = Mathf.Min(_topClamp, _bottomClamp);
+        float maxClamp = Mathf.Max(_topClamp, _bottomClamp);
+        _xRotation = Mathf.Clamp(_xRotation, minClamp, maxClamp);
 
         // rotation around y-axis
         _yRotation += mouseX;
 
         // apply rotation to our gameobject
         transform.localRotation = Quaternion.Euler(_xRotation, _yRotation, 0f);
-
-
-
-
     }
 }

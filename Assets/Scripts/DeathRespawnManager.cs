@@ -240,6 +240,12 @@ public class DeathRespawnManager : MonoBehaviour
             playerObj.transform.SetPositionAndRotation(startPosition, startRotation);
         }
 
+        MouseMovement mouseMovement = playerObj.GetComponent<MouseMovement>() ?? playerObj.GetComponentInChildren<MouseMovement>();
+        if (mouseMovement != null)
+        {
+            mouseMovement.SyncRotationWithTransform();
+        }
+
         Player player = playerObj.GetComponentInParent<Player>();
         if (player == null) player = playerObj.GetComponentInChildren<Player>();
         if (player != null)

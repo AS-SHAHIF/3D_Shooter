@@ -63,7 +63,10 @@ public class MainMenu : MonoBehaviour
         if (SaveLoadManager.Instance != null)
         {
             int highScore = SaveLoadManager.Instance.LoadHighScore();
-            highScoreUI.text = $"Top Wave Survived:{highScore}";
+            if (highScoreUI != null)
+            {
+                highScoreUI.text = $"Top Wave Survived:{highScore}";
+            }
         }
     }
 
@@ -85,11 +88,25 @@ public class MainMenu : MonoBehaviour
 
     public void StartNewScene()
     {
-        main_channel.Stop();
+        Time.timeScale = 1f;
+        AudioListener.pause = false;
 
-        LoadingManager.nextScene = newGameScene;
+        if (main_channel != null)
+        {
+            main_channel.Stop();
+        }
 
-        SceneManager.LoadScene("LoadingScene");
+        string targetScene = string.IsNullOrEmpty(newGameScene) ? "SampleScene" : newGameScene;
+        LoadingManager.nextScene = targetScene;
+
+        if (Application.CanStreamedLevelBeLoaded("LoadingScene"))
+        {
+            SceneManager.LoadScene("LoadingScene");
+        }
+        else
+        {
+            SceneManager.LoadScene(targetScene);
+        }
     }
 
     public void ExitApplication()

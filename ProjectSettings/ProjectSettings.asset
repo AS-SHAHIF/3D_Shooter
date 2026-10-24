@@ -68,11 +68,11 @@ PlayerSettings:
   preserveFramebufferAlpha: 0
   disableDepthAndStencilBuffers: 0
   androidStartInFullscreen: 1
-  androidRenderOutsideSafeArea: 0
+  androidRenderOutsideSafeArea: 1
   androidUseSwappy: 0
   androidDisplayOptions: 1
   androidBlitType: 0
-  androidResizeableActivity: 1
+  androidResizeableActivity: 0
   androidDefaultWindowWidth: 1920
   androidDefaultWindowHeight: 1080
   androidMinimumWindowWidth: 400
@@ -89,7 +89,7 @@ PlayerSettings:
   Force IOS Speakers When Recording: 0
   audioSpatialExperience: 0
   deferSystemGesturesMode: 0
-  hideHomeButton: 0
+  hideHomeButton: 1
   submitAnalytics: 1
   usePlayerLog: 1
   dedicatedServerOptimizations: 1

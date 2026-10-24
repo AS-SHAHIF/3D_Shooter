@@ -42,6 +42,22 @@ public class TouchLookArea : MonoBehaviour, IPointerDownHandler, IDragHandler, I
 
     private void Update()
     {
+        if (PauseManager.IsPaused)
+        {
+            hasPointer = false;
+            accumulatedDelta = Vector2.zero;
+            if (MobileInputManager.Instance != null)
+                MobileInputManager.Instance.lookInput = Vector2.zero;
+            return;
+        }
+
+        // Safe reset if all touches and mouse clicks have ended
+        if (hasPointer && Input.touchCount == 0 && !Input.GetMouseButton(0))
+        {
+            hasPointer = false;
+            accumulatedDelta = Vector2.zero;
+        }
+
         if (MobileInputManager.Instance == null) return;
 
         // Publish this frame's movement, then clear it so a still finger = no rotation
