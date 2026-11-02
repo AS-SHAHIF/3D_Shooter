@@ -63,6 +63,9 @@ public class DeathRespawnManager : MonoBehaviour
     private bool processingRespawn;
     private Vector3 startPosition;
     private Quaternion startRotation;
+    private Transform playerCameraTransform;
+    private Vector3 cameraStartLocalPos;
+    private Quaternion cameraStartLocalRot;
 
     private void Awake()
     {
@@ -90,6 +93,14 @@ public class DeathRespawnManager : MonoBehaviour
         {
             startPosition = playerObj.transform.position;
             startRotation = playerObj.transform.rotation;
+
+            Camera cam = playerObj.GetComponentInChildren<Camera>();
+            if (cam != null)
+            {
+                playerCameraTransform = cam.transform;
+                cameraStartLocalPos = playerCameraTransform.localPosition;
+                cameraStartLocalRot = playerCameraTransform.localRotation;
+            }
         }
 
         if (deathPanel != null) deathPanel.SetActive(false);
@@ -151,7 +162,7 @@ public class DeathRespawnManager : MonoBehaviour
         // Fade to black with UNSCALED time (the world is frozen at this point).
         yield return FadeScreen(1f, popupFadeDuration);
 
-        if (deathPanel != null) deathPanel.SetActive(true);
+        if (deathPanel != null) UIPopupAnimator.OpenPopup(deathPanel);
     }
 
     private void RefreshDeathPopup()
@@ -170,6 +181,7 @@ public class DeathRespawnManager : MonoBehaviour
 
     public void OnRespawnClicked()
     {
+        SoundManager.Instance?.PlayButtonClick();
         if (!IsPlayerDead || processingRespawn) return;
 
         // Cannot afford it -> existing Game Over -> Main Menu flow.
@@ -200,7 +212,7 @@ public class DeathRespawnManager : MonoBehaviour
 
     private IEnumerator RespawnRoutine()
     {
-        if (deathPanel != null) deathPanel.SetActive(false);
+        if (deathPanel != null) UIPopupAnimator.ClosePopup(deathPanel);
 
         // 3 - 2 - 1 countdown (realtime, the world is still frozen).
         if (countdownUI != null)
@@ -231,14 +243,18 @@ public class DeathRespawnManager : MonoBehaviour
         if (playerObj == null) return;
 
         // 1. Original spawn position with full health.
-        if (respawnPoint != null)
-        {
-            playerObj.transform.SetPositionAndRotation(respawnPoint.position, respawnPoint.rotation);
-        }
-        else
-        {
-            playerObj.transform.SetPositionAndRotation(startPosition, startRotation);
-        }
+        Vector3 targetPos = respawnPoint != null ? respawnPoint.position : startPosition;
+        Quaternion targetRot = respawnPoint != null ? respawnPoint.rotation : startRotation;
+
+        // CharacterController overrides Transform teleportation unless disabled first!
+        CharacterController cc = playerObj.GetComponent<CharacterController>();
+        if (cc != null) cc.enabled = false;
+
+        playerObj.transform.SetPositionAndRotation(targetPos, targetRot);
+
+        Physics.SyncTransforms();
+
+        if (cc != null) cc.enabled = true;
 
         MouseMovement mouseMovement = playerObj.GetComponent<MouseMovement>() ?? playerObj.GetComponentInChildren<MouseMovement>();
         if (mouseMovement != null)
@@ -246,18 +262,39 @@ public class DeathRespawnManager : MonoBehaviour
             mouseMovement.SyncRotationWithTransform();
         }
 
-        Player player = playerObj.GetComponentInParent<Player>();
-        if (player == null) player = playerObj.GetComponentInChildren<Player>();
-        if (player != null)
+        // Restore full health on ALL Player components in the hierarchy (Player root and Body child)
+        Player[] allPlayers = playerObj.GetComponentsInChildren<Player>(true);
+        foreach (Player player in allPlayers)
         {
+            player.enabled = true;
             player.HP = player.maxHP;
             player.ResetDeadState();
             player.UpdateHealthUI();
-            if (player.playerHealthUI != null) player.playerHealthUI.gameObject.SetActive(true);
-            if (player.healthBarRoot != null) player.healthBarRoot.SetActive(true);
-            if (player.healthSlider != null) player.healthSlider.gameObject.SetActive(true);
-            if (player.healthBarFill != null) player.healthBarFill.gameObject.SetActive(true);
-            if (player.bloodyScreen != null) player.bloodyScreen.SetActive(false);
+
+            if (player.playerHealthUI != null)
+            {
+                player.playerHealthUI.gameObject.SetActive(true);
+                if (player.playerHealthUI.transform.parent != null)
+                    player.playerHealthUI.transform.parent.gameObject.SetActive(true);
+            }
+            if (player.healthBarRoot != null)
+            {
+                player.healthBarRoot.SetActive(true);
+                if (player.healthBarRoot.transform.parent != null)
+                    player.healthBarRoot.transform.parent.gameObject.SetActive(true);
+            }
+            if (player.healthSlider != null)
+            {
+                player.healthSlider.gameObject.SetActive(true);
+            }
+            if (player.healthBarFill != null)
+            {
+                player.healthBarFill.gameObject.SetActive(true);
+            }
+            if (player.bloodyScreen != null)
+            {
+                player.bloodyScreen.SetActive(false);
+            }
         }
 
         // 2. Re-enable movement / look (they were disabled by Player.PlayerDead).
@@ -267,9 +304,21 @@ public class DeathRespawnManager : MonoBehaviour
         PlayerMovement pm = playerObj.GetComponentInParent<PlayerMovement>();
         if (pm != null) pm.enabled = true;
 
-        // 3. Undo the death animation (the animator is only enabled while dead).
+        // 3. Undo the death animation and fully reset the camera orientation.
+        // Disabling an Animator does NOT revert transformed bones/camera, so we reset them explicitly.
         Animator anim = playerObj.GetComponentInChildren<Animator>();
-        if (anim != null) anim.enabled = false;
+        if (anim != null)
+        {
+            anim.Rebind();
+            anim.Update(0f);
+            anim.enabled = false;
+        }
+
+        if (playerCameraTransform != null)
+        {
+            playerCameraTransform.localPosition = cameraStartLocalPos;
+            playerCameraTransform.localRotation = cameraStartLocalRot;
+        }
     }
 
     // ------------------------------------------------------------------
@@ -278,6 +327,7 @@ public class DeathRespawnManager : MonoBehaviour
 
     public void OnGiveUpClicked()
     {
+        SoundManager.Instance?.PlayButtonClick();
         if (!IsPlayerDead) return;
 
         FinalizeRun();
@@ -288,7 +338,7 @@ public class DeathRespawnManager : MonoBehaviour
 
     private IEnumerator GameOverToMenuRoutine()
     {
-        if (deathPanel != null) deathPanel.SetActive(false);
+        if (deathPanel != null) UIPopupAnimator.ClosePopup(deathPanel);
         if (countdownUI != null) countdownUI.gameObject.SetActive(false);
 
         FinalizeRun();
@@ -323,10 +373,14 @@ public class DeathRespawnManager : MonoBehaviour
         if (GlobalReferences.Instance != null && SaveLoadManager.Instance != null)
         {
             int waveSurvived = GlobalReferences.Instance.waveNumber;
-            if (waveSurvived - 1 > SaveLoadManager.Instance.LoadHighScore())
+            int completedWave = waveSurvived - 1;
+            if (completedWave > SaveLoadManager.Instance.LoadHighScore())
             {
-                SaveLoadManager.Instance.SaveHighScore(waveSurvived - 1);
+                SaveLoadManager.Instance.SaveHighScore(completedWave);
             }
+
+            // Ensure all badges up to the highest completed wave are unlocked for claiming in Main Menu
+            BadgeSystem.CheckWaveCompleted(completedWave);
         }
     }
 

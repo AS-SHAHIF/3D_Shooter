@@ -14,11 +14,27 @@ public class PickupPopupUI : MonoBehaviour
 
     private readonly Dictionary<Pickup, PickupRowUI> rowMap = new Dictionary<Pickup, PickupRowUI>();
     private readonly List<Pickup> toRemove = new List<Pickup>();
+    private bool wasPanelOpen;
 
     private void Awake()
     {
         Instance = this;
         panel.SetActive(false);
+        wasPanelOpen = false;
+    }
+
+    private void Update()
+    {
+        bool isOpen = panel != null && panel.activeSelf;
+        if (isOpen && !wasPanelOpen)
+        {
+            // Handled by UIPopupAnimator
+        }
+        else if (!isOpen && wasPanelOpen)
+        {
+            // Handled by UIPopupAnimator
+        }
+        wasPanelOpen = isOpen;
     }
 
     public void Refresh(IReadOnlyList<Pickup> items, PickupDetector detector)
@@ -51,6 +67,6 @@ public class PickupPopupUI : MonoBehaviour
             rowMap[item] = row;
         }
 
-        panel.SetActive(items.Count > 0);
+        bool shouldOpen = items.Count > 0; if (panel != null) { if (shouldOpen && !panel.activeSelf) UIPopupAnimator.OpenPopup(panel); else if (!shouldOpen && panel.activeSelf) UIPopupAnimator.ClosePopup(panel); }
     }
 }

@@ -36,11 +36,15 @@ public class PauseManager : MonoBehaviour
     {
         pausePanel.SetActive(false);
         if (countdownText != null) countdownText.gameObject.SetActive(false);
-        pauseButton.onClick.AddListener(Pause);
-        resumeButton.onClick.AddListener(Resume);
-        exitButton.onClick.AddListener(ExitToMenu);
+        pauseButton.onClick.AddListener(() => { Pause(); PlayButtonClick(); });
+        resumeButton.onClick.AddListener(() => { Resume(); PlayButtonClick(); });
+        exitButton.onClick.AddListener(() => { ExitToMenu(); PlayButtonClick(); });
 
+    }
 
+    private void PlayButtonClick()
+    {
+        SoundManager.Instance?.PlayButtonClick();
     }
 
     private void Update()
@@ -65,10 +69,7 @@ public class PauseManager : MonoBehaviour
         }
 
         pauseButton.gameObject.SetActive(false);
-        pausePanel.SetActive(true);
-        pauseCanvasGroup.alpha = 1f;
-        pauseCanvasGroup.interactable = true;
-        pauseCanvasGroup.blocksRaycasts = true;
+        UIPopupAnimator.OpenPopup(pausePanel);
 
         SetCursorFree(true);
     }
@@ -82,17 +83,8 @@ public class PauseManager : MonoBehaviour
     private IEnumerator ResumeRoutine()
     {
         counting = true;
-        pauseCanvasGroup.interactable = false;
-
-        // Fade the popup out (unscaled time, because the game is paused)
-        float t = 0f;
-        while (t < fadeDuration)
-        {
-            t += Time.unscaledDeltaTime;
-            pauseCanvasGroup.alpha = Mathf.Lerp(1f, 0f, t / fadeDuration);
-            yield return null;
-        }
-        pausePanel.SetActive(false);
+        UIPopupAnimator.ClosePopup(pausePanel);
+        yield return new WaitForSecondsRealtime(0.2f);
 
         // Countdown 3, 2, 1
         if (countdownText != null)
@@ -124,6 +116,8 @@ public class PauseManager : MonoBehaviour
         Time.timeScale = 1f;
         AudioListener.pause = false;
         IsPaused = false;
+
+        SoundManager.Instance?.PlayPopupClose();
 
         SceneManager.LoadScene(mainMenuScene);
     }

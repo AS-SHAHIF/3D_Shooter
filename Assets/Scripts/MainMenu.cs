@@ -36,16 +36,16 @@ public class MainMenu : MonoBehaviour
     {
         if (settingsPanel != null)
         {
-            settingsPanel.SetActive(false);
+            UIPopupAnimator.ClosePopup(settingsPanel);
         }
 
         if (audioMixer == null)
         {
-            audioMixer = Resources.Load<UnityEngine.Audio.AudioMixer>("MainAudioMixer");
+            audioMixer = ((main_channel != null && main_channel.outputAudioMixerGroup != null) ? main_channel.outputAudioMixerGroup.audioMixer : Resources.Load<UnityEngine.Audio.AudioMixer>("MainAudioMixer"));
         }
         if (audioMixer != null && main_channel != null && main_channel.outputAudioMixerGroup == null)
         {
-            var musicGroups = audioMixer.FindMatchingGroups("music");
+            var musicGroups = (audioMixer.FindMatchingGroups("Music").Length > 0 ? audioMixer.FindMatchingGroups("Music") : audioMixer.FindMatchingGroups("music"));
             if (musicGroups != null && musicGroups.Length > 0)
             {
                 main_channel.outputAudioMixerGroup = musicGroups[0];
@@ -72,22 +72,25 @@ public class MainMenu : MonoBehaviour
 
     public void OpenSettings()
     {
+        SoundManager.Instance?.PlayButtonClick();
         if (settingsPanel != null)
         {
-            settingsPanel.SetActive(true);
+            UIPopupAnimator.OpenPopup(settingsPanel);
         }
     }
 
     public void CloseSettings()
     {
+        SoundManager.Instance?.PlayButtonClick();
         if (settingsPanel != null)
         {
-            settingsPanel.SetActive(false);
+            UIPopupAnimator.ClosePopup(settingsPanel);
         }
     }
 
     public void StartNewScene()
     {
+        SoundManager.Instance?.PlayButtonClick();
         Time.timeScale = 1f;
         AudioListener.pause = false;
 
@@ -111,6 +114,7 @@ public class MainMenu : MonoBehaviour
 
     public void ExitApplication()
     {
+        SoundManager.Instance?.PlayButtonClick();
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
 #else
@@ -118,3 +122,4 @@ public class MainMenu : MonoBehaviour
 #endif
     }
 }
+

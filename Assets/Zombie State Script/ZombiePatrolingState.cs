@@ -11,6 +11,7 @@ public class ZombiePatrolingState : StateMachineBehaviour
     public float detectionAreaRadius = 18f;
     public float patrolSpeed = 2f;
     private readonly List<Transform> waypointsList = new List<Transform>();
+    private ZombieAudio zombieAudio;
 
     override public void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {
@@ -25,6 +26,12 @@ public class ZombiePatrolingState : StateMachineBehaviour
         if (agent != null)
         {
             agent.speed = patrolSpeed;
+        }
+
+        zombieAudio = animator.GetComponent<ZombieAudio>();
+        if (zombieAudio != null)
+        {
+            zombieAudio.PlayWalking();
         }
 
         waypointsList.Clear();
@@ -46,16 +53,6 @@ public class ZombiePatrolingState : StateMachineBehaviour
 
     override public void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {
-        // Sound check with full null safety
-        if (SoundManager.Instance != null && SoundManager.Instance.zombieChannel != null && SoundManager.Instance.zombieWalking != null)
-        {
-            if (!SoundManager.Instance.zombieChannel.isPlaying)
-            {
-                SoundManager.Instance.zombieChannel.clip = SoundManager.Instance.zombieWalking;
-                SoundManager.Instance.zombieChannel.PlayDelayed(1f);
-            }
-        }
-
         // Move to next waypoint if arrived
         if (agent != null && agent.isOnNavMesh && waypointsList.Count > 0)
         {
@@ -99,9 +96,9 @@ public class ZombiePatrolingState : StateMachineBehaviour
             agent.SetDestination(agent.transform.position);
         }
 
-        if (SoundManager.Instance != null && SoundManager.Instance.zombieChannel != null)
+        if (zombieAudio != null)
         {
-            SoundManager.Instance.zombieChannel.Stop();
+            zombieAudio.StopLoop();
         }
     }
 }

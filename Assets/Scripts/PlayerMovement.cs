@@ -3,19 +3,27 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     private CharacterController characterController;
-    [SerializeField] private float _speed = 12f;
-    [SerializeField] private float _gravity = -19.62f;
+
+    [Header("Movement Speeds")]
+    [SerializeField] private float _walkSpeed = 5f;    // reduced from 12 → feels like a walk
+    [SerializeField] private float _runSpeed  = 12f;   // speed when Run button is held
+
+    [SerializeField] private float _gravity    = -19.62f;
     [SerializeField] private float _jumpHeight = 2.5f;
 
     public Transform groundCheck;
     [SerializeField] private float _groundDistance = 0.4f;
     public LayerMask GrounLayerMask;
 
-    private Vector3 velocity = Vector3.zero;
+    private Vector3 velocity     = Vector3.zero;
     private bool _isGround;
     private bool _isMoving;
     public bool isMoving => _isMoving;
     private Vector3 _lastPosition = Vector3.zero;
+
+    // True while the player is sprinting (Run button held AND joystick/keys active)
+    private bool _isRunning;
+    public bool isRunning => _isRunning;
 
     [SerializeField] private Animator animator;
 
@@ -47,14 +55,9 @@ public class PlayerMovement : MonoBehaviour
             groundCheck = transform.Find("GroundCheck");
         }
 
-        if (_speed <= 0.1f)
-        {
-            _speed = 12f;
-        }
-        if (_gravity >= 0f)
-        {
-            _gravity = -19.62f;
-        }
+        if (_walkSpeed <= 0.1f) _walkSpeed = 5f;
+        if (_runSpeed  <= 0.1f) _runSpeed  = 12f;
+        if (_gravity   >= 0f)   _gravity   = -19.62f;
     }
 
     private void Update()
@@ -62,10 +65,11 @@ public class PlayerMovement : MonoBehaviour
         if (PauseManager.IsPaused) return;
         if (characterController == null) return;
 
-        // Ground check
+        // ── Ground check ───────────────────────────────────────────────────
         if (groundCheck != null && GrounLayerMask.value != 0)
         {
-            _isGround = Physics.CheckSphere(groundCheck.position, _groundDistance, GrounLayerMask) || characterController.isGrounded;
+            _isGround = Physics.CheckSphere(groundCheck.position, _groundDistance, GrounLayerMask)
+                        || characterController.isGrounded;
         }
         else
         {
@@ -77,6 +81,7 @@ public class PlayerMovement : MonoBehaviour
             velocity.y = -2f;
         }
 
+        // ── Input ──────────────────────────────────────────────────────────
         float x = Input.GetAxisRaw("Horizontal");
         float y = Input.GetAxisRaw("Vertical");
 
@@ -86,63 +91,69 @@ public class PlayerMovement : MonoBehaviour
             y = MobileInputManager.Instance.moveInput.y;
         }
 
+        // Run: Shift key toggles on PC, Run button toggles on mobile
+        if (Input.GetKeyDown(KeyCode.LeftShift))
+        {
+            // Toggle run on PC with Shift key press
+            if (MobileInputManager.Instance != null)
+                MobileInputManager.Instance.isRunHeld = !MobileInputManager.Instance.isRunHeld;
+        }
+
+        bool runToggleOn = MobileInputManager.Instance != null && MobileInputManager.Instance.isRunHeld;
+
+        bool moving = (x != 0 || y != 0);
+
+        // Only sprint when moving AND run toggle is ON
+        _isRunning = moving && runToggleOn;
+        float currentSpeed = _isRunning ? _runSpeed : _walkSpeed;
+
+        // ── Animator ───────────────────────────────────────────────────────
         if (animator != null)
         {
             animator.SetBool("IsWalkingForward", y > 0);
+            animator.SetBool("IsRunning", _isRunning);
         }
 
+        // ── Movement direction ─────────────────────────────────────────────
         Vector3 forward = transform.forward;
-        Vector3 right = transform.right;
+        Vector3 right   = transform.right;
         forward.y = 0f;
-        right.y = 0f;
+        right.y   = 0f;
         forward.Normalize();
         right.Normalize();
 
         Vector3 moveDirection = (right * x + forward * y).normalized;
 
-        bool jumpPressed = Input.GetButtonDown("Jump") || (MobileInputManager.Instance != null && MobileInputManager.Instance.isJumpTriggered);
+        // ── Jump ───────────────────────────────────────────────────────────
+        bool jumpPressed = Input.GetButtonDown("Jump")
+                           || (MobileInputManager.Instance != null && MobileInputManager.Instance.isJumpTriggered);
         if (jumpPressed && _isGround)
         {
             velocity.y = Mathf.Sqrt(_jumpHeight * -2f * _gravity);
         }
 
+        // ── Apply gravity & move ───────────────────────────────────────────
         velocity.y += _gravity * Time.deltaTime;
-        velocity.y = Mathf.Clamp(velocity.y, -30f, 30f);
+        velocity.y  = Mathf.Clamp(velocity.y, -30f, 30f);
 
-        Vector3 finalMovement = (moveDirection * _speed) + new Vector3(0, velocity.y, 0);
+        Vector3 finalMovement = (moveDirection * currentSpeed) + new Vector3(0, velocity.y, 0);
         characterController.Move(finalMovement * Time.deltaTime);
 
-        if (_lastPosition != transform.position && _isGround)
-        {
-            _isMoving = true;
-        }
-        else
-        {
-            _isMoving = false;
-        }
-
+        // ── Moving state ───────────────────────────────────────────────────
+        _isMoving = (_lastPosition != transform.position) && _isGround;
         _lastPosition = transform.position;
 
-        // Check if player is moving (keyboard or joystick)
-        bool moving = (x != 0 || y != 0);
+        // Play / stop walking sound based on movement state (adjusts pitch/speed for running)
+        SoundManager.Instance?.PlayPlayerWalking(_isMoving, _isRunning);
 
-        // Check if player is shooting or aiming (mouse or mobile fire button)
-        bool mobileFire = MobileInputManager.Instance != null && MobileInputManager.Instance.isFireHeld;
-        bool isPointerOverUI = UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject();
-        bool pcFire = !Application.isMobilePlatform && Cursor.lockState == CursorLockMode.Locked && !isPointerOverUI;
-        bool isShooting = (pcFire && Input.GetKey(KeyCode.Mouse0)) || mobileFire;
-        bool isAiming = Input.GetMouseButton(1);
-
-        // Only play the high-ready running animation if moving AND NOT shooting AND NOT aiming!
-        bool shouldRunPose = moving && !isShooting && !isAiming;
-
-        // Pass to the weapon/hands animator:
+        // ── Weapon pose ───────────────────────────────────────────────────
+        // Keep gun in its clean idle form while walking, running, and dragging the screen
         if (WeaponManager.Instance != null && WeaponManager.Instance.activeWeaponSlot != null)
         {
             Animator weaponAnim = WeaponManager.Instance.activeWeaponSlot.GetComponentInChildren<Animator>();
             if (weaponAnim != null)
             {
-                weaponAnim.SetBool("isRunning", shouldRunPose);
+                weaponAnim.SetBool("isRunning", false);
             }
         }
     }

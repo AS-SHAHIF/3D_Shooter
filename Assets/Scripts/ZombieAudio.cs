@@ -6,19 +6,20 @@ public class ZombieAudio : MonoBehaviour
     private AudioSource source;
     private AudioSource loopSource;
 
+    [Header("3D Audio Range Settings")]
+    [SerializeField] private float minDistance = 2f;
+    [SerializeField] private float maxDistance = 20f; // Sounds can only be heard within 20 meters!
+
     private void Awake()
     {
         source = GetComponent<AudioSource>();
+        ConfigureSource(source);
 
         // Second source so a loop is never cut off by a hurt/attack one-shot
         loopSource = gameObject.AddComponent<AudioSource>();
         loopSource.playOnAwake = false;
         loopSource.loop = true;
-        loopSource.spatialBlend = source.spatialBlend;
-        loopSource.rolloffMode = source.rolloffMode;
-        loopSource.minDistance = source.minDistance;
-        loopSource.maxDistance = source.maxDistance;
-        loopSource.dopplerLevel = source.dopplerLevel;
+        ConfigureSource(loopSource);
 
         // Reuse the sfx mixer group so volume settings still apply
         if (SoundManager.Instance != null && SoundManager.Instance.zombieChannel2 != null)
@@ -29,9 +30,47 @@ public class ZombieAudio : MonoBehaviour
         }
     }
 
-    public void PlayHurt() { PlayOneShot(SoundManager.Instance != null ? SoundManager.Instance.zombieHurt : null); }
-    public void PlayDeath() { PlayOneShot(SoundManager.Instance != null ? SoundManager.Instance.zombieDeath : null); }
-    public void PlayAttack() { PlayOneShot(SoundManager.Instance != null ? SoundManager.Instance.zombieAttack : null); }
+    private void ConfigureSource(AudioSource src)
+    {
+        if (src == null) return;
+        src.spatialBlend = 1f; // 100% 3D sound
+        src.rolloffMode = AudioRolloffMode.Linear;
+        src.minDistance = minDistance;
+        src.maxDistance = maxDistance;
+        src.dopplerLevel = 0f;
+    }
+
+    public void PlayWalking()
+    {
+        if (SoundManager.Instance != null && SoundManager.Instance.zombieWalking != null)
+        {
+            PlayLoop(SoundManager.Instance.zombieWalking);
+        }
+    }
+
+    public void PlayChase()
+    {
+        if (SoundManager.Instance != null && SoundManager.Instance.zombieChase != null)
+        {
+            PlayLoop(SoundManager.Instance.zombieChase);
+        }
+    }
+
+    public void PlayHurt()
+    {
+        PlayOneShot(SoundManager.Instance != null ? SoundManager.Instance.zombieHurt : null);
+    }
+
+    public void PlayDeath()
+    {
+        StopLoop();
+        PlayOneShot(SoundManager.Instance != null ? SoundManager.Instance.zombieDeath : null);
+    }
+
+    public void PlayAttack()
+    {
+        PlayOneShot(SoundManager.Instance != null ? SoundManager.Instance.zombieAttack : null);
+    }
 
     private void PlayOneShot(AudioClip clip)
     {
@@ -50,5 +89,4 @@ public class ZombieAudio : MonoBehaviour
     {
         if (loopSource != null) loopSource.Stop();
     }
-
 }

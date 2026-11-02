@@ -8,6 +8,7 @@ public class ZombieChaseState : StateMachineBehaviour
     public float chaseSpeed = 6f;
     public float stopChasingDistance = 21f;
     public float attackingDiatance = 2.5f;
+    private ZombieAudio zombieAudio;
 
     override public void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {
@@ -22,18 +23,16 @@ public class ZombieChaseState : StateMachineBehaviour
         {
             agent.speed = chaseSpeed;
         }
+
+        zombieAudio = animator.GetComponent<ZombieAudio>();
+        if (zombieAudio != null)
+        {
+            zombieAudio.PlayChase();
+        }
     }
 
     override public void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {
-        if (SoundManager.Instance != null && SoundManager.Instance.zombieChannel != null && SoundManager.Instance.zombieChase != null)
-        {
-            if (!SoundManager.Instance.zombieChannel.isPlaying)
-            {
-                SoundManager.Instance.zombieChannel.PlayOneShot(SoundManager.Instance.zombieChase);
-            }
-        }
-
         if (player == null)
         {
             GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
@@ -76,9 +75,9 @@ public class ZombieChaseState : StateMachineBehaviour
             agent.SetDestination(animator.transform.position);
         }
 
-        if (SoundManager.Instance != null && SoundManager.Instance.zombieChannel != null)
+        if (zombieAudio != null)
         {
-            SoundManager.Instance.zombieChannel.Stop();
+            zombieAudio.StopLoop();
         }
     }
 }

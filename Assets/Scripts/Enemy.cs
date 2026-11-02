@@ -18,6 +18,13 @@ public class Enemy : MonoBehaviour
         zombieAudio = GetComponent<ZombieAudio>();
         maxHP = HP;
         if (healthBar != null) healthBar.SetHealth(HP, maxHP);
+
+        // NOTE: Minimap registration is handled by ZombieSpawner to avoid double-registration.
+    }
+
+    private void OnDestroy()
+    {
+        // NOTE: Minimap unregistration is handled by ZombieSpawner.
     }
 
     public void TakeDamage(int damageAmount)

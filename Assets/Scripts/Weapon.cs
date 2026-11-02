@@ -41,7 +41,10 @@ public class Weapon : MonoBehaviour
     public ShootingMode currentShootMode = ShootingMode.Auto;
     public Animator animator;
 
+    [Header("Reload Settings")]
     public float reloadTime = 2.2f;
+    [Tooltip("Reload speed multiplier. 1.0 = normal, 1.5 = 50% faster, 2.0 = 2x faster.")]
+    public float reloadSpeedMultiplier = 1.5f;
     public int magazineSize = 30;
     public int bulletleft = 30;
     private bool isReloading;
@@ -49,7 +52,8 @@ public class Weapon : MonoBehaviour
     public enum WeaponModel
     {
         pistol,
-        m16
+        m16,
+        sniper
     }
 
     public WeaponModel thisWeaponModel = WeaponModel.m16;
@@ -149,14 +153,17 @@ public class Weapon : MonoBehaviour
         // Skip everything if reloading
         if (isReloading) return;
 
-        // ADS input
-        if (Input.GetMouseButtonDown(1))
+        // ADS input (PC only when cursor is locked and not on touch screens to prevent multi-touch triggering ADS)
+        if (!Application.isMobilePlatform && Input.touchCount == 0 && Cursor.lockState == CursorLockMode.Locked)
         {
-            EnterADS();
-        }
-        if (Input.GetMouseButtonUp(1))
-        {
-            ExitADS();
+            if (Input.GetMouseButtonDown(1))
+            {
+                EnterADS();
+            }
+            if (Input.GetMouseButtonUp(1))
+            {
+                ExitADS();
+            }
         }
 
         // Detect shooting input
@@ -289,26 +296,48 @@ public class Weapon : MonoBehaviour
         }
     }
 
+    private void OnDisable()
+    {
+        if (isReloading)
+        {
+            CancelInvoke(nameof(ReloadingCompleted));
+            isReloading = false;
+            if (animator != null)
+            {
+                animator.speed = 1f;
+            }
+        }
+    }
+
     public void Reload()
     {
         if (isReloading) return;
 
+        float effectiveSpeedMultiplier = Mathf.Max(0.1f, reloadSpeedMultiplier);
+        float effectiveReloadTime = reloadTime / effectiveSpeedMultiplier;
+
         if (SoundManager.Instance != null)
         {
-            SoundManager.Instance.PlayReloadSound(thisWeaponModel);
+            SoundManager.Instance.PlayReloadSound(thisWeaponModel, effectiveSpeedMultiplier);
         }
 
         if (animator != null)
         {
+            animator.speed = effectiveSpeedMultiplier;
             animator.SetTrigger("RELOAD");
         }
 
         isReloading = true;
-        Invoke("ReloadingCompleted", reloadTime);
+        Invoke(nameof(ReloadingCompleted), effectiveReloadTime);
     }
 
     private void ReloadingCompleted()
     {
+        if (animator != null)
+        {
+            animator.speed = 1f;
+        }
+
         if (WeaponManager.Instance != null)
         {
             int ammoLeft = WeaponManager.Instance.CheckAmmoLeftFor(thisWeaponModel);

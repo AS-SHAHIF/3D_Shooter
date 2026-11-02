@@ -53,7 +53,7 @@ public class WeaponManager : MonoBehaviour
             activeWeaponSlot = weaponSlots[0];
         }
 
-        equippedLethalType = Throwable.ThrowableType.None;
+        if (lethalsCount > 0) equippedLethalType = Throwable.ThrowableType.Grenade; else equippedLethalType = Throwable.ThrowableType.None;
         equippedTacticalType = Throwable.ThrowableType.None;
 
         if (activeWeaponSlot != null && activeWeaponSlot.transform.childCount > 0)
@@ -220,7 +220,7 @@ public class WeaponManager : MonoBehaviour
             weapon.bulletleft = weapon.magazineSize > 0 ? weapon.magazineSize : 30;
         }
 
-        if (weapon.thisWeaponModel == Weapon.WeaponModel.m16 && _totalRifleAmmo <= 0)
+        if ((weapon.thisWeaponModel == Weapon.WeaponModel.m16 || weapon.thisWeaponModel == Weapon.WeaponModel.sniper) && _totalRifleAmmo <= 0)
         {
             _totalRifleAmmo = 90;
         }
@@ -350,6 +350,7 @@ public class WeaponManager : MonoBehaviour
         switch (thisWeaponModel)
         {
             case Weapon.WeaponModel.m16:
+            case Weapon.WeaponModel.sniper:
                 _totalRifleAmmo -= bulletsToDecrease;
                 break;
             case Weapon.WeaponModel.pistol:
@@ -363,6 +364,7 @@ public class WeaponManager : MonoBehaviour
         switch (thisWeaponModel)
         {
             case Weapon.WeaponModel.m16:
+            case Weapon.WeaponModel.sniper:
                 return _totalRifleAmmo;
             case Weapon.WeaponModel.pistol:
                 return _totalPistolAmmo;
@@ -408,7 +410,9 @@ public class WeaponManager : MonoBehaviour
 
     public void ThrowLathel()
     {
+        if (equippedLethalType == Throwable.ThrowableType.None && lethalsCount > 0) equippedLethalType = Throwable.ThrowableType.Grenade;
         GameObject lathelPrefab = GetThrowablePrefab(equippedLethalType);
+        if (lathelPrefab == null) lathelPrefab = grenadePrefab;
         if (lathelPrefab == null || Camera.main == null) return;
 
         Vector3 spawnPos = throwableSpawn != null ? throwableSpawn.transform.position : (Camera.main.transform.position + Camera.main.transform.forward * 0.8f);
@@ -423,6 +427,19 @@ public class WeaponManager : MonoBehaviour
             rb.linearVelocity = Vector3.zero;
             rb.AddForce(throwDir * speed, ForceMode.Impulse);
             rb.AddTorque(UnityEngine.Random.insideUnitSphere * 8f, ForceMode.Impulse);
+        }
+
+        Pickup pickup = throwable.GetComponent<Pickup>() ?? throwable.GetComponentInChildren<Pickup>();
+        if (pickup != null) pickup.enabled = false;
+
+        Collider grenCol = throwable.GetComponent<Collider>() ?? throwable.GetComponentInChildren<Collider>();
+        Collider[] playerCols = GetComponentsInChildren<Collider>(true);
+        if (grenCol != null && playerCols != null)
+        {
+            foreach (Collider pc in playerCols)
+            {
+                if (pc != null) Physics.IgnoreCollision(grenCol, pc, true);
+            }
         }
 
         Throwable th = throwable.GetComponent<Throwable>() ?? throwable.GetComponentInChildren<Throwable>();

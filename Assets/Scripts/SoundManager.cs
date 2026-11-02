@@ -15,9 +15,11 @@ public class SoundManager : MonoBehaviour
     public AudioSource ShootingChannel;
     public AudioClip m16Shot;
     public AudioClip pistolShot;
+    public AudioClip sniperShot;
 
     public AudioSource reloadingSoundpistol;
     public AudioSource reloadingSoundM16;
+    public AudioSource reloadingSoundSniper;
     public AudioSource empty_pistol_sound;
 
     [Header("Throwables")]
@@ -37,11 +39,22 @@ public class SoundManager : MonoBehaviour
     public AudioSource playerChannel;
     public AudioClip playerHurt;
     public AudioClip playerDie;
+    public AudioClip playerWalking;
     public AudioClip gameOverMusic;
+    [Tooltip("Playback speed / pitch of footsteps when walking")]
+    public float walkFootstepPitch = 1.0f;
+    [Tooltip("Playback speed / pitch of footsteps when running")]
+    public float runFootstepPitch = 1.5f;
 
     [Header("Pickups")]
     public AudioClip crystalPickupSound;
     public AudioClip ammoPickupSound;
+
+    [Header("UI / Popup")]
+    public AudioSource uiChannel;                // 2D sound for UI/popup/button clicks
+    public AudioClip popupOpenSound;
+    public AudioClip popupCloseSound;
+    public AudioClip buttonClickSound;
 
     public static SoundManager Instance { get; set; }
 
@@ -56,6 +69,17 @@ public class SoundManager : MonoBehaviour
             Instance = this;
         }
 
+        // Ensure a dedicated 2D channel exists for UI / popup / button sounds so
+        // they are audible even while the game is paused (popups, death, menus).
+        if (uiChannel == null)
+        {
+            uiChannel = gameObject.AddComponent<AudioSource>();
+            uiChannel.playOnAwake = false;
+            uiChannel.loop = false;
+            uiChannel.spatialBlend = 0f;
+        }
+        uiChannel.ignoreListenerPause = true;
+
         AssignMixerGroups();
     }
 
@@ -68,13 +92,25 @@ public class SoundManager : MonoBehaviour
     {
         if (audioMixer == null)
         {
-            audioMixer = Resources.Load<AudioMixer>("MainAudioMixer");
+            // Auto-detect mixer from existing channels if already assigned in Inspector
+            if (ShootingChannel != null && ShootingChannel.outputAudioMixerGroup != null)
+            {
+                audioMixer = ShootingChannel.outputAudioMixerGroup.audioMixer;
+            }
+            else
+            {
+                audioMixer = Resources.Load<AudioMixer>("MainAudioMixer");
+            }
         }
 
         if (audioMixer != null)
         {
+            // Case-insensitive search for both sfx and music mixer groups
             AudioMixerGroup[] sfxGroups = audioMixer.FindMatchingGroups("sfx");
-            AudioMixerGroup[] musicGroups = audioMixer.FindMatchingGroups("music");
+            if (sfxGroups == null || sfxGroups.Length == 0) sfxGroups = audioMixer.FindMatchingGroups("SFX");
+
+            AudioMixerGroup[] musicGroups = audioMixer.FindMatchingGroups("Music");
+            if (musicGroups == null || musicGroups.Length == 0) musicGroups = audioMixer.FindMatchingGroups("music");
 
             AudioMixerGroup sfxGroup = (sfxGroups != null && sfxGroups.Length > 0) ? sfxGroups[0] : null;
             AudioMixerGroup musicGroup = (musicGroups != null && musicGroups.Length > 0) ? musicGroups[0] : null;
@@ -89,6 +125,7 @@ public class SoundManager : MonoBehaviour
                 if (zombieChannel != null && zombieChannel.outputAudioMixerGroup == null) zombieChannel.outputAudioMixerGroup = sfxGroup;
                 if (zombieChannel2 != null && zombieChannel2.outputAudioMixerGroup == null) zombieChannel2.outputAudioMixerGroup = sfxGroup;
                 if (playerChannel != null && playerChannel.outputAudioMixerGroup == null) playerChannel.outputAudioMixerGroup = sfxGroup;
+                if (uiChannel != null && uiChannel.outputAudioMixerGroup == null) uiChannel.outputAudioMixerGroup = sfxGroup;
             }
 
             if (musicGroup != null)
@@ -131,18 +168,38 @@ public class SoundManager : MonoBehaviour
             case WeaponModel.m16:
                 if (m16Shot != null) ShootingChannel.PlayOneShot(m16Shot);
                 break;
+            case WeaponModel.sniper:
+                AudioClip sClip = sniperShot != null ? sniperShot : m16Shot;
+                if (sClip != null) ShootingChannel.PlayOneShot(sClip);
+                break;
         }
     }
 
-    public void PlayReloadSound(WeaponModel weapon)
+    public void PlayReloadSound(WeaponModel weapon, float pitch = 1.0f)
     {
         switch (weapon)
         {
             case WeaponModel.pistol:
-                if (reloadingSoundpistol != null) reloadingSoundpistol.Play();
+                if (reloadingSoundpistol != null)
+                {
+                    reloadingSoundpistol.pitch = pitch;
+                    reloadingSoundpistol.Play();
+                }
                 break;
             case WeaponModel.m16:
-                if (reloadingSoundM16 != null) reloadingSoundM16.Play();
+                if (reloadingSoundM16 != null)
+                {
+                    reloadingSoundM16.pitch = pitch;
+                    reloadingSoundM16.Play();
+                }
+                break;
+            case WeaponModel.sniper:
+                AudioSource sRel = reloadingSoundSniper != null ? reloadingSoundSniper : reloadingSoundM16;
+                if (sRel != null)
+                {
+                    sRel.pitch = pitch;
+                    sRel.Play();
+                }
                 break;
         }
     }
@@ -162,6 +219,70 @@ public class SoundManager : MonoBehaviour
         if (clipToPlay != null && playerChannel != null)
         {
             playerChannel.PlayOneShot(clipToPlay);
+        }
+    }
+
+    public void PlayPlayerWalking(bool isWalking, bool isRunning = false)
+    {
+        if (playerChannel == null || playerWalking == null) return;
+
+        if (isWalking)
+        {
+            // Adjust pitch/speed dynamically based on walking vs running
+            playerChannel.pitch = isRunning ? runFootstepPitch : walkFootstepPitch;
+
+            // Start the walking loop (restart if a different clip was playing).
+            if (!playerChannel.isPlaying || playerChannel.clip != playerWalking)
+            {
+                playerChannel.clip = playerWalking;
+                playerChannel.loop = true;
+                playerChannel.Play();
+            }
+        }
+        else
+        {
+            // Stop the walking loop only if the walking clip is what's playing.
+            if (playerChannel.isPlaying && playerChannel.clip == playerWalking)
+            {
+                playerChannel.Stop();
+                playerChannel.loop = false;
+                playerChannel.clip = null;
+                playerChannel.pitch = 1.0f;
+            }
+        }
+    }
+
+    public void StopPlayerWalking()
+    {
+        if (playerChannel != null && playerChannel.isPlaying && playerChannel.clip == playerWalking)
+        {
+            playerChannel.Stop();
+            playerChannel.loop = false;
+            playerChannel.clip = null;
+            playerChannel.pitch = 1.0f;
+        }
+    }
+
+    public void PlayPopupOpen()
+    {
+        PlayUISound(uiChannel, popupOpenSound);
+    }
+
+    public void PlayPopupClose()
+    {
+        PlayUISound(uiChannel, popupCloseSound);
+    }
+
+    public void PlayButtonClick()
+    {
+        PlayUISound(uiChannel, buttonClickSound);
+    }
+
+    private void PlayUISound(AudioSource source, AudioClip clip)
+    {
+        if (source != null && clip != null)
+        {
+            source.PlayOneShot(clip);
         }
     }
 }

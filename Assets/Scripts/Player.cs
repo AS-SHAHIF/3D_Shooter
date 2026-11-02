@@ -73,6 +73,9 @@ public class Player : MonoBehaviour
 
     private void PlayerDead()
     {
+        // Stop the walking sound loop when the player dies.
+        SoundManager.Instance?.StopPlayerWalking();
+
         // Save collected crystals permanently to disk
         CrystalSaveSystem.Save();
 
@@ -82,7 +85,9 @@ public class Player : MonoBehaviour
             {
                 SoundManager.Instance.playerChannel.PlayOneShot(SoundManager.Instance.playerDie);
             }
-            if (SoundManager.Instance.gameOverMusic != null)
+            // Old "You are dead" music is disabled when the Death & Respawn popup is active.
+            // The death popup replaces the old Game Over screen, so don't start the old music.
+            if (DeathRespawnManager.Instance == null && SoundManager.Instance.gameOverMusic != null)
             {
                 SoundManager.Instance.playerChannel.clip = SoundManager.Instance.gameOverMusic;
                 SoundManager.Instance.playerChannel.PlayDelayed(2f);

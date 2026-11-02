@@ -85,12 +85,12 @@ public class MainMenuShop : MonoBehaviour
 
     public void OpenShop()
     {
-        if (shopPanel != null) shopPanel.SetActive(true);
+        if (shopPanel != null) UIPopupAnimator.OpenPopup(shopPanel);
         RefreshUI();
     }
 
     public void CloseShop()
     {
-        if (shopPanel != null) shopPanel.SetActive(false);
+        if (shopPanel != null) UIPopupAnimator.ClosePopup(shopPanel);
     }
 }

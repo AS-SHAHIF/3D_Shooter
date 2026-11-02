@@ -61,8 +61,11 @@ public class TouchLookArea : MonoBehaviour, IPointerDownHandler, IDragHandler, I
         if (MobileInputManager.Instance == null) return;
 
         // Publish this frame's movement, then clear it so a still finger = no rotation
-        MobileInputManager.Instance.lookInput = accumulatedDelta;
-        accumulatedDelta = Vector2.zero;
+        if (accumulatedDelta != Vector2.zero)
+        {
+            MobileInputManager.Instance.AddLookInput(accumulatedDelta);
+            accumulatedDelta = Vector2.zero;
+        }
     }
 
     private void OnDisable()
